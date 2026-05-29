@@ -1,0 +1,8 @@
+streamlit>=1.40
+pandas>=2.0
+numpy>=1.26
+plotly>=5.20
+scikit-learn>=1.4
+pillow>=10.0
+kagglehub[pandas-datasets]>=0.3.0
+ollama>=0.4.0
