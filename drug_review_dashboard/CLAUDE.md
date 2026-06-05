@@ -1,10 +1,11 @@
 # CLAUDE.md — System Guide
 
-Definitive guide for Claude Code sessions on this repository. Read this first.
+Definitive guide for Claude Code sessions on this project. Read this first.
 
-The active project lives in **`drug_review_dashboard/`**. Run all commands from
-that folder unless noted otherwise. (The repo root also holds weekly course
-exercises under `NN_week/`, which are unrelated to this project.)
+This file lives in the **project root** (`drug_review_dashboard/`), alongside
+`app.py` and `README.md`. **Run all commands from this folder.** The shared
+virtual environment `venv/` lives one level up at the workspace root (`../venv`),
+which also holds unrelated weekly course exercises (`../NN_week/`).
 
 ---
 
@@ -14,7 +15,7 @@ exercises under `NN_week/`, which are unrelated to this project.)
 risk" reviews from the UCI ML Drug Review dataset (~215k rows) and serves the
 result through an interactive dashboard.
 
-- **App / UI**: Streamlit multipage app (`drug_review_dashboard/app.py` + `pages/`)
+- **App / UI**: Streamlit multipage app (`app.py` + `pages/`)
 - **ML**: scikit-learn — RandomForest (deployed) + HistGradientBoosting (benchmark), TF-IDF text features
 - **LLM (Ollama-first)**: local **Ollama `gemma3`** → **OpenAI `gpt-4o-mini`** backup → offline rule-based
 - **R&D / Lab**: **JupyterLab** notebook (`notebooks/EDA_and_Preprocessing_Analysis.ipynb`)
@@ -24,19 +25,20 @@ result through an interactive dashboard.
 
 ## 2. Build & Run Commands
 
-A virtual environment (`venv/`) already exists at the **repo root**. Create/activate:
+A virtual environment (`venv/`) already exists at the **workspace root** (`../venv`).
+Create/activate it:
 
 ```bash
-# Windows (PowerShell)  — from repo root
-python -m venv venv
-.\venv\Scripts\Activate.ps1            # if blocked: Set-ExecutionPolicy -Scope Process RemoteSigned
+# Windows (PowerShell) — from the workspace root (one level up)
+python -m venv ..\venv                  # only if it does not exist yet
+..\venv\Scripts\Activate.ps1            # if blocked: Set-ExecutionPolicy -Scope Process RemoteSigned
 
-# macOS / Linux — from repo root
-python3 -m venv venv
-source venv/bin/activate
+# macOS / Linux — from the workspace root
+python3 -m venv ../venv                 # only if it does not exist yet
+source ../venv/bin/activate
 ```
 
-Then, from the **`drug_review_dashboard/`** folder:
+Then, from **this** folder (`drug_review_dashboard/`):
 
 ```bash
 pip install -r requirements.txt
@@ -48,7 +50,7 @@ pytest tests/test_llm_routing.py -q   # just the LLM-routing tests
 ```
 
 > Without activating the venv, prefix Python directly, e.g.
-> `../venv/Scripts/python.exe -m pytest -q` (Windows) — `src/` imports require the venv.
+> `..\venv\Scripts\python.exe -m pytest -q` (Windows) — `src/` imports require the venv.
 
 ---
 
