@@ -6,3 +6,9 @@ scikit-learn>=1.4
 pillow>=10.0
 kagglehub[pandas-datasets]>=0.3.0
 ollama>=0.4.0
+openai>=1.40
+python-dotenv>=1.0
+# EDA 보고용 그림 생성(eda_report.py)·노트북에만 사용
+matplotlib>=3.8
+seaborn>=0.13
+jupyterlab>=4.0

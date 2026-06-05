@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -65,33 +66,29 @@ POSITIVE_KEYWORDS = {
 }
 
 STOPWORDS = {
-    "this",
-    "that",
-    "with",
-    "from",
-    "have",
-    "after",
-    "before",
-    "about",
-    "were",
-    "been",
-    "they",
-    "then",
-    "when",
-    "will",
-    "would",
-    "could",
-    "there",
-    "their",
-    "medicine",
-    "medication",
-    "drug",
-    "dose",
-    "taking",
-    "took",
+    # common English function words (so keyword charts surface real symptoms)
+    "the", "and", "was", "had", "for", "but", "not", "you", "are", "she", "her",
+    "his", "him", "its", "our", "out", "who", "how", "why", "all", "any", "can",
+    "did", "has", "get", "got", "now", "one", "two", "too", "off", "per", "use",
+    "used", "than", "them", "into", "over", "very", "just", "only", "more",
+    "most", "some", "such", "even", "also", "much", "many", "back", "down", "still",
+    "this", "that", "with", "from", "have", "after", "before", "about", "were",
+    "been", "they", "then", "when", "will", "would", "could", "should", "there",
+    "their", "what", "which", "while", "again", "ever", "every", "your", "yours",
+    "mine", "myself", "because", "though", "since", "until", "being", "doing",
+    "having", "does", "day", "days", "week", "weeks", "month", "months", "year",
+    "years", "time", "times", "first", "last", "feel", "felt", "feels", "really",
+    # domain-generic words that aren't symptoms
+    "medicine", "medication", "drug", "drugs", "dose", "doses", "dosage", "taking",
+    "took", "take", "takes", "pill", "pills", "mg", "started", "start", "stopped",
+    # pronoun/verb contractions
+    "i'm", "i've", "i'll", "i'd", "it's", "that's", "don't", "didn't", "doesn't",
+    "can't", "wasn't", "isn't", "haven't", "hadn't", "won't", "they're", "you're",
 }
 
 
+# All engineered numeric columns add_features() produces. Used for EDA,
+# correlation analysis, and the data-explorer page.
 NUMERIC_FEATURES = [
     "rating",
     "useful_count",
@@ -107,6 +104,23 @@ NUMERIC_FEATURES = [
     "drug_review_count",
     "drug_avg_rating",
 ]
+
+# Columns that the weak label build_target() is *defined from*. Feeding these to
+# the classifier lets it reconstruct the label deterministically (target
+# leakage), which is why early runs scored ~99% / AUC 1.0. They are excluded
+# from the model so reported metrics reflect honest predictive skill.
+#   label = (severe_keyword_count > 0) OR (rating <= 3 AND symptom_keyword_count > 0)
+LABEL_DEFINING_FEATURES = [
+    "severe_keyword_count",
+    "symptom_keyword_count",
+    "low_rating_flag",
+]
+
+# Numeric features actually given to the model. `rating` is kept on purpose: it
+# is a genuine user-provided signal and, on its own (without the symptom-keyword
+# count), cannot reconstruct the label. The TF-IDF of the raw review text is
+# added on top of these inside the modeling pipeline.
+MODEL_FEATURES = [c for c in NUMERIC_FEATURES if c not in LABEL_DEFINING_FEATURES]
 
 
 @dataclass(frozen=True)
@@ -125,14 +139,28 @@ def normalize_text(text: str) -> str:
     return text.strip()
 
 
-def count_keywords(text: str, keywords: set[str]) -> int:
-    text = normalize_text(text)
-    count = 0
-    for keyword in keywords:
-        pattern = r"\b" + re.escape(keyword) + r"\b"
-        if re.search(pattern, text):
-            count += 1
-    return count
+@lru_cache(maxsize=None)
+def _keyword_pattern(keywords: frozenset[str]) -> re.Pattern:
+    """One compiled, word-boundaried alternation for a keyword set (cached).
+
+    Longer phrases first so e.g. "chest pain" wins over "pain" in findall.
+    """
+    ordered = sorted(keywords, key=len, reverse=True)
+    alternation = "|".join(re.escape(k) for k in ordered)
+    return re.compile(r"\b(?:" + alternation + r")\b")
+
+
+def count_keywords(text: str, keywords) -> int:
+    """Number of *distinct* keywords from the set present in the text.
+
+    Uses a single precompiled regex per set (instead of recompiling one regex
+    per keyword per row), which is the dominant cost in add_features over tens
+    of thousands of reviews.
+    """
+    if not keywords:
+        return 0
+    pattern = _keyword_pattern(frozenset(keywords))
+    return len(set(pattern.findall(normalize_text(text))))
 
 
 def build_target(df: pd.DataFrame) -> pd.Series:
@@ -229,6 +257,15 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def ensure_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Return df unchanged if it is already feature-engineered, else add features.
+
+    Lets callers accept an already-prepared (cached) DataFrame without paying the
+    cost of running add_features a second time.
+    """
+    return df if "risk_label" in df.columns else add_features(df)
+
+
 def _uppercase_ratio(text: str) -> float:
     letters = re.findall(r"[A-Za-z]", str(text))
     if not letters:
@@ -244,11 +281,18 @@ def make_prediction_frame(
     rating: float,
     useful_count: float = 0,
 ) -> pd.DataFrame:
+    """Build a single feature row for one user input.
+
+    Only the user's row is feature-engineered (cheap); the drug-level statistics
+    (review count, avg rating, IQR cutoff) are looked up from the base dataset so
+    we never re-featurize the whole 50k+ row frame on each prediction click.
+    """
+    drug_name = drug_name or "Unknown"
     row = pd.DataFrame(
         [
             {
                 "review_id": "user-input",
-                "drug_name": drug_name or "Unknown",
+                "drug_name": drug_name,
                 "condition": "User input",
                 "review": review or "",
                 "rating": rating,
@@ -257,13 +301,34 @@ def make_prediction_frame(
             }
         ]
     )
-    combined = pd.concat([base_df[["review_id", "drug_name", "condition", "review", "rating", "date", "useful_count"]], row])
-    featured = add_features(combined)
+    featured = add_features(row)  # 1 row: text/linguistic features computed correctly
+
+    # Drug-level stats must come from the full dataset, not the single row.
+    base = ensure_features(base_df)
+    stats = compute_drug_stats(base)
+    match = stats[stats["drug_name"] == drug_name]
+    if not match.empty:
+        s = match.iloc[0]
+        featured["drug_review_count"] = s["drug_review_count"]
+        featured["drug_avg_rating"] = s["drug_avg_rating"]
+        featured["drug_low_outlier_cutoff"] = s["drug_low_outlier_cutoff"]
+    else:  # unseen drug -> fall back to global distribution
+        q1 = base["rating"].quantile(0.25)
+        q3 = base["rating"].quantile(0.75)
+        featured["drug_review_count"] = float(len(base))
+        featured["drug_avg_rating"] = float(base["rating"].mean()) if len(base) else 0.0
+        featured["drug_low_outlier_cutoff"] = q1 - 1.5 * (q3 - q1)
+
+    cutoff = float(featured["drug_low_outlier_cutoff"].iloc[0])
+    featured["rating_iqr_low_outlier"] = int(float(featured["rating"].iloc[0]) < cutoff)
+
+    for col in NUMERIC_FEATURES:
+        featured[col] = pd.to_numeric(featured[col], errors="coerce").fillna(0)
     return featured.tail(1).reset_index(drop=True)
 
 
 def get_drug_summary(df: pd.DataFrame, min_reviews: int = 5) -> pd.DataFrame:
-    featured = add_features(df)
+    featured = ensure_features(df)
     summary = (
         featured.groupby("drug_name")
         .agg(

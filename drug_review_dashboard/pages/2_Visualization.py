@@ -11,14 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.data_loader import load_drug_reviews
-from src.features import add_features, extract_keywords, get_drug_summary
-
-
-@st.cache_data(show_spinner="시각화 데이터 준비 중...")
-def get_data(max_rows: int):
-    df, source = load_drug_reviews(max_rows=max_rows)
-    return add_features(df), source
+from src.data_cache import get_prepared_data, get_summary
+from src.features import extract_keywords
 
 
 st.title("인사이트 시각화")
@@ -28,8 +22,8 @@ with st.sidebar:
     max_rows = st.number_input("최대 로딩 행 수", min_value=500, max_value=200_000, value=50_000, step=5_000)
     min_reviews = st.slider("약물별 최소 리뷰 수", 1, 100, 5)
 
-df, source = get_data(int(max_rows))
-summary = get_drug_summary(df, min_reviews=min_reviews)
+df, source, _ = get_prepared_data(int(max_rows), False)
+summary = get_summary(int(max_rows), False, min_reviews=min_reviews)
 
 if summary.empty:
     st.warning("필터 조건에 맞는 약물이 없습니다. 최소 리뷰 수를 낮춰보세요.")
