@@ -65,33 +65,29 @@ POSITIVE_KEYWORDS = {
 }
 
 STOPWORDS = {
-    "this",
-    "that",
-    "with",
-    "from",
-    "have",
-    "after",
-    "before",
-    "about",
-    "were",
-    "been",
-    "they",
-    "then",
-    "when",
-    "will",
-    "would",
-    "could",
-    "there",
-    "their",
-    "medicine",
-    "medication",
-    "drug",
-    "dose",
-    "taking",
-    "took",
+    # common English function words (so keyword charts surface real symptoms)
+    "the", "and", "was", "had", "for", "but", "not", "you", "are", "she", "her",
+    "his", "him", "its", "our", "out", "who", "how", "why", "all", "any", "can",
+    "did", "has", "get", "got", "now", "one", "two", "too", "off", "per", "use",
+    "used", "than", "them", "into", "over", "very", "just", "only", "more",
+    "most", "some", "such", "even", "also", "much", "many", "back", "down", "still",
+    "this", "that", "with", "from", "have", "after", "before", "about", "were",
+    "been", "they", "then", "when", "will", "would", "could", "should", "there",
+    "their", "what", "which", "while", "again", "ever", "every", "your", "yours",
+    "mine", "myself", "because", "though", "since", "until", "being", "doing",
+    "having", "does", "day", "days", "week", "weeks", "month", "months", "year",
+    "years", "time", "times", "first", "last", "feel", "felt", "feels", "really",
+    # domain-generic words that aren't symptoms
+    "medicine", "medication", "drug", "drugs", "dose", "doses", "dosage", "taking",
+    "took", "take", "takes", "pill", "pills", "mg", "started", "start", "stopped",
+    # pronoun/verb contractions
+    "i'm", "i've", "i'll", "i'd", "it's", "that's", "don't", "didn't", "doesn't",
+    "can't", "wasn't", "isn't", "haven't", "hadn't", "won't", "they're", "you're",
 }
 
 
+# All engineered numeric columns add_features() produces. Used for EDA,
+# correlation analysis, and the data-explorer page.
 NUMERIC_FEATURES = [
     "rating",
     "useful_count",
@@ -107,6 +103,23 @@ NUMERIC_FEATURES = [
     "drug_review_count",
     "drug_avg_rating",
 ]
+
+# Columns that the weak label build_target() is *defined from*. Feeding these to
+# the classifier lets it reconstruct the label deterministically (target
+# leakage), which is why early runs scored ~99% / AUC 1.0. They are excluded
+# from the model so reported metrics reflect honest predictive skill.
+#   label = (severe_keyword_count > 0) OR (rating <= 3 AND symptom_keyword_count > 0)
+LABEL_DEFINING_FEATURES = [
+    "severe_keyword_count",
+    "symptom_keyword_count",
+    "low_rating_flag",
+]
+
+# Numeric features actually given to the model. `rating` is kept on purpose: it
+# is a genuine user-provided signal and, on its own (without the symptom-keyword
+# count), cannot reconstruct the label. The TF-IDF of the raw review text is
+# added on top of these inside the modeling pipeline.
+MODEL_FEATURES = [c for c in NUMERIC_FEATURES if c not in LABEL_DEFINING_FEATURES]
 
 
 @dataclass(frozen=True)

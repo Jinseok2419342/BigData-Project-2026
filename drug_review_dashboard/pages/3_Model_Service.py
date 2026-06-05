@@ -15,7 +15,21 @@ if str(ROOT) not in sys.path:
 
 from src.data_loader import load_drug_reviews
 from src.features import add_features, make_prediction_frame
-from src.llm_helper import build_rule_based_report, try_ollama_report
+from src.llm_helper import (
+    PROVIDER_OFFLINE,
+    PROVIDER_OLLAMA,
+    PROVIDER_OPENAI,
+    build_rule_based_report,
+    generate_report,
+    openai_available,
+    try_ollama_vision,
+)
+
+PROVIDER_LABELS = {
+    "OpenAI API": PROVIDER_OPENAI,
+    "로컬 Ollama": PROVIDER_OLLAMA,
+    "오프라인(규칙 기반)": PROVIDER_OFFLINE,
+}
 from src.modeling import predict_risk, train_risk_model
 
 
@@ -44,8 +58,16 @@ st.caption("입력한 약물명과 복용 리뷰를 바탕으로 부작용 위�
 with st.sidebar:
     max_rows = st.number_input("최대 데이터 행 수", min_value=500, max_value=200_000, value=50_000, step=5_000)
     sample_size = st.number_input("모델 학습 샘플 수", min_value=500, max_value=50_000, value=12_000, step=1_000)
-    use_ollama = st.toggle("Ollama 리포트 시도", value=False)
-    ollama_model = st.text_input("Ollama 모델명", value="gemma3", disabled=not use_ollama)
+    st.markdown("---")
+    st.subheader("LLM 리포트 엔진")
+    provider_label = st.radio("백엔드 선택", list(PROVIDER_LABELS.keys()), index=2)
+    report_provider = PROVIDER_LABELS[provider_label]
+    if openai_available():
+        st.caption("✅ OPENAI_API_KEY 감지됨")
+    else:
+        st.caption("⚠️ OPENAI_API_KEY 없음 — OpenAI 선택 시 Ollama→규칙 순으로 대체")
+    openai_model = st.text_input("OpenAI 모델명", value="gpt-4o-mini", disabled=report_provider != PROVIDER_OPENAI)
+    ollama_model = st.text_input("Ollama 모델명", value="gemma3", disabled=report_provider == PROVIDER_OFFLINE)
 
 df, source = get_data(int(max_rows))
 bundle = get_model(df, int(sample_size))
@@ -57,12 +79,37 @@ metric_cols[2].metric("Accuracy", f"{bundle.metrics['accuracy'] * 100:.1f}%")
 metric_cols[3].metric("Recall", f"{bundle.metrics['recall'] * 100:.1f}%")
 metric_cols[4].metric("F1", f"{bundle.metrics['f1'] * 100:.1f}%")
 
-with st.expander("모델 성능과 특성 중요도 보기", expanded=False):
+st.caption(
+    "지표는 **누수(leakage) 제거** 평가입니다. 라벨을 정의하는 키워드 카운트(severe/symptom)와 "
+    "low_rating_flag는 학습 특성에서 제외했고, 모델은 리뷰 원문(TF-IDF)과 비누수 특성만으로 위험군을 예측합니다."
+)
+
+with st.expander("모델 성능 · 비교 · 특성 중요도 보기", expanded=False):
+    if bundle.comparison is not None:
+        st.markdown("**모델 비교 (검증셋, 누수 제거)** — 단순 규칙(rating≤3) 대비 성능 향상 확인")
+        comp = bundle.comparison.copy()
+        for c in ["accuracy", "precision", "recall", "f1", "roc_auc"]:
+            comp[c] = (comp[c] * 100).round(1)
+        st.dataframe(
+            comp,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "model": "모델",
+                "accuracy": st.column_config.NumberColumn("Acc(%)", format="%.1f"),
+                "precision": st.column_config.NumberColumn("Prec(%)", format="%.1f"),
+                "recall": st.column_config.NumberColumn("Recall(%)", format="%.1f"),
+                "f1": st.column_config.NumberColumn("F1(%)", format="%.1f"),
+                "roc_auc": st.column_config.NumberColumn("AUC(%)", format="%.1f"),
+            },
+        )
+
     col1, col2 = st.columns([1, 1.2])
     with col1:
         cm = bundle.metrics["confusion_matrix"]
         cm_df = pd.DataFrame(cm, index=["실제 안전군", "실제 위험군"], columns=["예측 안전군", "예측 위험군"])
         fig = px.imshow(cm_df, text_auto=True, color_continuous_scale="Blues", labels={"color": "건수"})
+        fig.update_layout(title=f"혼동행렬 (배포 모델: {bundle.model_name})")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.bar(
@@ -84,15 +131,34 @@ left, right = st.columns([0.95, 1.05])
 with left:
     st.subheader("사용자 입력")
     uploaded = st.file_uploader("약통 이미지 업로드", type=["png", "jpg", "jpeg"])
+    use_vision = st.toggle("이미지 멀티모달 인식(Ollama) 시도", value=False,
+                           help="로컬 Ollama의 비전 모델(gemma3 등)로 약통 글자를 읽어 약물명을 매칭합니다. 실패 시 파일명 기반으로 대체합니다.")
     guessed = None
     if uploaded is not None:
+        image_bytes = uploaded.getvalue()
         image = Image.open(uploaded)
         st.image(image, caption="업로드한 이미지", use_container_width=True)
-        guessed = guess_drug_from_filename(uploaded.name, drug_options)
-        if guessed:
-            st.caption(f"파일명에서 약물 후보를 찾았습니다: {guessed}")
-        else:
-            st.caption("현재 버전은 이미지 미리보기와 파일명 기반 후보 매칭까지 지원합니다.")
+
+        if use_vision:
+            with st.spinner("Ollama 비전 모델로 약통을 인식하는 중..."):
+                vision = try_ollama_vision(image_bytes, drug_options, model="gemma3")
+            if vision is None:
+                st.caption("Ollama 비전 호출 실패 → 파일명 기반 매칭으로 대체합니다.")
+            else:
+                guessed = vision.get("matched")
+                with st.popover("모델이 읽은 내용 보기"):
+                    st.text(vision.get("raw", ""))
+                if guessed:
+                    st.success(f"멀티모달 인식 결과 약물 후보: {guessed}")
+                else:
+                    st.caption("이미지에서 데이터셋 약물과 일치하는 이름을 찾지 못했습니다.")
+
+        if guessed is None:
+            guessed = guess_drug_from_filename(uploaded.name, drug_options)
+            if guessed:
+                st.caption(f"파일명에서 약물 후보를 찾았습니다: {guessed}")
+            elif not use_vision:
+                st.caption("이미지 미리보기 + 파일명 기반 후보 매칭을 지원합니다. (멀티모달은 위 토글)")
 
     selected = st.selectbox(
         "약물명 선택",
@@ -147,7 +213,7 @@ with right:
             )
         )
 
-        if use_ollama:
+        if report_provider != PROVIDER_OFFLINE:
             prompt = f"""
 약물명: {manual_drug}
 사용자 증상/리뷰: {review_text}
@@ -156,12 +222,18 @@ IQR 이상치 여부: {iqr_flag}
 
 의학적 진단은 피하고, 수업용 서비스 리포트 형식으로 위험 신호와 다음 행동을 한국어로 정리해줘.
 """
-            ollama_text = try_ollama_report(prompt, model=ollama_model)
-            if ollama_text:
-                st.markdown("### Ollama 리포트")
-                st.markdown(ollama_text)
+            with st.spinner("LLM 심층 리포트 생성 중..."):
+                llm_text = generate_report(
+                    prompt,
+                    provider=report_provider,
+                    openai_model=openai_model,
+                    ollama_model=ollama_model,
+                )
+            if llm_text:
+                st.markdown(f"### LLM 심층 리포트 ({provider_label})")
+                st.markdown(llm_text)
             else:
-                st.info("Ollama 호출에 실패했습니다. 로컬 Ollama 서버와 모델 설치 상태를 확인하세요.")
+                st.info("선택한 LLM 호출에 실패했습니다. OpenAI 키 또는 로컬 Ollama 상태를 확인하세요. (위 규칙 기반 리포트는 항상 제공됩니다.)")
 
         st.subheader("과거 유사 리뷰")
         if similar.empty:

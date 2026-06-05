@@ -14,10 +14,11 @@ eda = st.Page("pages/1_EDA.py", title="EDA 대시보드", default=True)
 visual = st.Page("pages/2_Visualization.py", title="인사이트 시각화")
 service = st.Page("pages/3_Model_Service.py", title="모델 서비스")
 data = st.Page("pages/4_Data.py", title="데이터 조회")
+chatbot = st.Page("pages/5_Chatbot.py", title="AI 상담 챗봇")
 
 pg = st.navigation(
     {
-        "UCI Drug Review ADE Monitor": [eda, visual, service, data],
+        "UCI Drug Review ADE Monitor": [eda, visual, service, data, chatbot],
     }
 )
 

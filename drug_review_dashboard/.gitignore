@@ -1,7 +1,10 @@
 __pycache__/
+.pytest_cache/
 *.pyc
 *.log
 .streamlit/
 .kagglehub_cache/
 models/
 *.pkl
+# 실제 API 키 보호 (.env.example 은 커밋됨)
+.env

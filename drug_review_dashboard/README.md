@@ -4,11 +4,42 @@ UCI ML Drug Review dataset을 이용해 환자 리뷰에서 심각한 부작용(
 
 ## 실행 방법
 
+### 1) 가상환경(venv) 생성 및 활성화
+
+가상환경을 사용하면 시스템 파이썬과 의존성이 섞이지 않습니다. 프로젝트 폴더에서 실행하세요.
+
+**Windows (PowerShell)**
 ```powershell
 cd drug_review_dashboard
+python -m venv venv
+# 실행 정책 때문에 활성화가 막히면(최초 1회): Set-ExecutionPolicy -Scope Process RemoteSigned
+.\venv\Scripts\Activate.ps1
+```
+
+**Windows (cmd)**
+```bat
+cd drug_review_dashboard
+python -m venv venv
+venv\Scripts\activate.bat
+```
+
+**macOS / Linux (bash/zsh)**
+```bash
+cd drug_review_dashboard
+python3 -m venv venv
+source venv/bin/activate
+```
+
+활성화되면 프롬프트 앞에 `(venv)`가 표시됩니다. 종료는 `deactivate`.
+
+### 2) 의존성 설치 및 실행
+
+```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+> 참고: 이 저장소에는 이미 만들어진 `venv/`가 상위 폴더에 포함될 수 있습니다. 새 환경을 만들 때는 위 절차를 따르세요. `venv/`는 보통 버전 관리에서 제외합니다.
 
 ## 데이터 준비
 
@@ -33,11 +64,46 @@ KaggleHub 다운로드 캐시는 프로젝트 내부 `.kagglehub_cache/`에 저�
 ## 구현 범위
 
 - EDA 페이지: 요약, 결측치, 평점/리뷰 길이/위험군 분포
-- 시각화 페이지: 약물별 위험군 비율, 평점 대비 위험군 산점도, IQR 평점 이상치, 키워드 비교
-- 모델 서비스 페이지: 약물명과 증상 텍스트 입력 후 RandomForest 위험도 예측
-- 이미지 입력: 약통 이미지 업로드와 파일명 기반 약물 후보 매칭
+- 시각화 페이지: 약물별 위험군 비율, 평점 대비 위험군 산점도, IQR 평점 이상치, 키워드 비교, 월별 추이
+- 모델 서비스 페이지: 약물명과 증상 텍스트 입력 후 RandomForest 위험도 예측 + 모델 비교표(RF/HGB/규칙 베이스라인)
+- 이미지 입력: 약통 이미지 업로드 → Ollama 비전 모델 멀티모달 약물명 인식(실패 시 파일명 기반 후보로 대체)
 - 리포트: 규칙 기반 AI 상담 리포트와 선택적 Ollama 호출
 - 데이터 조회: 검색, 필터링, CSV 다운로드
+- AI 상담 챗봇: 약물별 모니터링 요약 + 부작용/주의사항 질의응답(리뷰 데이터 근거, Ollama 또는 규칙 기반 답변)
+- 별도 EDA 스크립트(`eda_report.py`): 전체 데이터 통계 요약 + 그림 저장(`eda_outputs/`)
+
+## LLM 백엔드 (OpenAI / Ollama / 오프라인)
+
+모델 서비스 페이지와 AI 상담 챗봇은 사이드바에서 답변 엔진을 고를 수 있습니다.
+
+- **OpenAI API**: `OPENAI_API_KEY`가 있으면 `gpt-4o-mini`(기본) 등으로 호출. 키가 없거나 호출 실패 시 자동으로 Ollama → 규칙 기반 순으로 대체합니다.
+- **로컬 Ollama**: 로컬 `gemma3` 등으로 호출. 실패 시 규칙 기반으로 대체합니다.
+- **오프라인(규칙 기반)**: LLM 없이 리뷰 데이터 통계 기반 답변. 항상 동작(시연 안전).
+
+우선순위/폴백 로직은 `src/llm_helper.py`의 `route_chat()`에 구현되어 있습니다.
+
+API 키 설정:
+
+```powershell
+# .env.example 을 .env 로 복사하고 실제 키를 입력 (.env 는 git에 커밋되지 않음)
+Copy-Item .env.example .env
+# .env 안의 OPENAI_API_KEY=your_api_key_here 를 실제 키로 교체
+```
+
+키는 streamlit secrets(`.streamlit/secrets.toml`의 `OPENAI_API_KEY`) → `.env`/환경변수 순으로 탐색합니다.
+
+## 테스트
+
+LLM 라우팅/폴백 로직 단위 테스트:
+
+```powershell
+pip install pytest
+python -m pytest tests/ -q
+```
+
+## 데이터 누수(leakage) 처리
+
+약한 라벨은 심각/증상 키워드 수와 낮은 평점으로 정의되므로, 이 컬럼들을 그대로 학습에 넣으면 모델이 라벨 규칙을 복원해 비현실적 성능(Acc~99%)이 나온다. 따라서 라벨 정의 컬럼(`severe_keyword_count`, `symptom_keyword_count`, `low_rating_flag`)을 학습 특성에서 제외(`MODEL_FEATURES`)하고 리뷰 원문 TF-IDF + 비누수 특성만으로 학습해 **정직한 성능(F1≈0.90)** 을 보고한다. 자세한 내용은 `보고서.md` 4·6장 참고.
 
 ## 주의
 
