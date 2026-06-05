@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.data_loader import load_drug_reviews
-from src.features import add_features
+from src.data_cache import get_prepared_data
+from src.features import extract_keywords
 from src.llm_helper import (
     PROVIDER_OFFLINE,
     PROVIDER_OLLAMA,
@@ -23,15 +23,26 @@ from src.llm_helper import (
 )
 
 
-@st.cache_data(show_spinner="챗봇용 데이터 준비 중...")
-def get_data(max_rows: int):
-    df, source = load_drug_reviews(max_rows=max_rows)
-    return add_features(df), source
+@st.cache_data(show_spinner=False)
+def get_drug_view(max_rows: int, drug_name: str):
+    """Per-drug grounding context + keyword chart data, cached by (rows, drug).
+
+    Keeps each chat message instant: the drug subset + keyword extraction run
+    once per drug instead of on every rerun.
+    """
+    df, _, _ = get_prepared_data(max_rows, False)
+    drug_df = df[df["drug_name"] == drug_name]
+    ctx = build_drug_context(drug_df, drug_name)
+    risky = drug_df[drug_df["risk_label"] == 1]["review"]
+    source_reviews = risky if not risky.empty else drug_df["review"]
+    top_kw = extract_keywords(source_reviews, top_n=10)
+    return ctx, top_kw
 
 
+# Ollama-first priority chain (Ollama -> OpenAI backup -> rule-based).
 PROVIDER_LABELS = {
-    "OpenAI API": PROVIDER_OPENAI,
-    "로컬 Ollama": PROVIDER_OLLAMA,
+    "로컬 Ollama 우선 (자동: Ollama→OpenAI→규칙)": PROVIDER_OLLAMA,
+    "OpenAI 우선 (OpenAI→Ollama→규칙)": PROVIDER_OPENAI,
     "오프라인(규칙 기반)": PROVIDER_OFFLINE,
 }
 
@@ -43,23 +54,30 @@ with st.sidebar:
     max_rows = st.number_input("최대 로딩 행 수", min_value=500, max_value=200_000, value=50_000, step=5_000)
     st.markdown("---")
     st.subheader("답변 엔진")
-    provider_label = st.radio("LLM 백엔드 선택", list(PROVIDER_LABELS.keys()), index=2)
+    provider_label = st.radio("LLM 백엔드 선택", list(PROVIDER_LABELS.keys()), index=0)
     provider = PROVIDER_LABELS[provider_label]
+    st.caption("기본은 로컬 Ollama 우선, 실패 시 OpenAI(키 있을 때) → 규칙 기반 순으로 자동 대체됩니다.")
     if openai_available():
-        st.caption("✅ OPENAI_API_KEY 감지됨")
+        st.caption("✅ OPENAI_API_KEY 감지됨 (백업 사용 가능)")
     else:
-        st.caption("⚠️ OPENAI_API_KEY 없음 — OpenAI 선택 시 Ollama→규칙 순으로 대체")
-    openai_model = st.text_input("OpenAI 모델명", value="gpt-4o-mini", disabled=provider != PROVIDER_OPENAI)
+        st.caption("⚠️ OPENAI_API_KEY 없음 — Ollama 실패 시 바로 규칙 기반으로 대체")
     ollama_model = st.text_input("Ollama 모델명", value="gemma3", disabled=provider == PROVIDER_OFFLINE)
+    openai_model = st.text_input("OpenAI 모델명(백업)", value="gpt-4o-mini", disabled=provider == PROVIDER_OFFLINE)
 
-df, source = get_data(int(max_rows))
+df, source, _ = get_prepared_data(int(max_rows), False)
 
-drug_counts = df["drug_name"].value_counts()
-drug_options = drug_counts[drug_counts >= 5].index.tolist() or sorted(df["drug_name"].unique().tolist())
+
+@st.cache_data(show_spinner=False)
+def get_drug_options(max_rows: int):
+    data, _, _ = get_prepared_data(max_rows, False)
+    counts = data["drug_name"].value_counts()
+    return counts[counts >= 5].index.tolist() or sorted(data["drug_name"].unique().tolist())
+
+
+drug_options = get_drug_options(int(max_rows))
 selected_drug = st.selectbox("상담할 약물 선택", drug_options, index=0)
 
-drug_df = df[df["drug_name"] == selected_drug].copy()
-ctx = build_drug_context(drug_df, selected_drug)
+ctx, top_kw = get_drug_view(int(max_rows), selected_drug)
 
 # --- lightweight monitoring summary (problem def: monitoring + chatbot 탭) ---
 m1, m2, m3 = st.columns(3)
@@ -69,14 +87,6 @@ m3.metric("위험군 비율", f"{ctx['risk_ratio'] * 100:.1f}%" if ctx["risk_rat
 
 with st.expander("이 약물의 모니터링 요약 (챗봇 근거 데이터)", expanded=False):
     if ctx["keywords"]:
-        kw_df = (
-            drug_df[drug_df["risk_label"] == 1]["review"]
-            if (drug_df["risk_label"] == 1).any()
-            else drug_df["review"]
-        )
-        from src.features import extract_keywords
-
-        top_kw = extract_keywords(kw_df, top_n=10)
         if not top_kw.empty:
             fig = px.bar(
                 top_kw.sort_values("count"),

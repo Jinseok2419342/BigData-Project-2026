@@ -88,25 +88,35 @@ def test_explicit_api_key_overrides_resolver(monkeypatch):
     assert calls["ollama"] == 0
 
 
-def test_ollama_selected_uses_only_ollama(monkeypatch):
+def test_ollama_first_succeeds_without_touching_openai(monkeypatch):
+    # Ollama-first default: Ollama succeeds -> OpenAI backup never used.
     calls = _patch(monkeypatch, key="sk-x", openai_ret="OAI", ollama_ret="OLL")
     assert llm.route_chat("p", llm.PROVIDER_OLLAMA) == "OLL"
-    assert calls["openai"] == 0  # openai never tried when ollama is selected
     assert calls["ollama"] == 1
-
-
-def test_ollama_selected_failure_returns_none(monkeypatch):
-    calls = _patch(monkeypatch, key="sk-x", openai_ret="OAI", ollama_ret=None)
-    assert llm.route_chat("p", llm.PROVIDER_OLLAMA) is None
     assert calls["openai"] == 0
+
+
+def test_ollama_failure_falls_back_to_openai(monkeypatch):
+    # New Ollama-first chain: Ollama fails -> OpenAI backup (key present).
+    calls = _patch(monkeypatch, key="sk-x", openai_ret="OAI", ollama_ret=None)
+    assert llm.route_chat("p", llm.PROVIDER_OLLAMA) == "OAI"
+    assert calls["ollama"] == 1  # tried first
+    assert calls["openai"] == 1  # backup used
+
+
+def test_ollama_fails_and_no_key_returns_none(monkeypatch):
+    # Ollama fails, no OpenAI key -> None (caller drops to rule-based).
+    calls = _patch(monkeypatch, key=None, openai_ret="OAI", ollama_ret=None)
+    assert llm.route_chat("p", llm.PROVIDER_OLLAMA) is None
     assert calls["ollama"] == 1
+    assert calls["openai"] == 0  # skipped: no key
 
 
 def test_all_paths_fail_returns_none(monkeypatch):
     calls = _patch(monkeypatch, key="sk-x", openai_ret=None, ollama_ret=None)
-    assert llm.route_chat("p", llm.PROVIDER_OPENAI) is None
-    assert calls["openai"] == 1
+    assert llm.route_chat("p", llm.PROVIDER_OLLAMA) is None
     assert calls["ollama"] == 1
+    assert calls["openai"] == 1
 
 
 # --- answer_drug_question (chatbot end-to-end routing) --------------------
@@ -122,6 +132,14 @@ def test_answer_openai_returns_llm_text(monkeypatch):
     _patch(monkeypatch, key="sk-x", openai_ret="LLM_ANSWER", ollama_ret="OLL")
     out = llm.answer_drug_question("부작용은?", CTX, provider=llm.PROVIDER_OPENAI)
     assert out == "LLM_ANSWER"
+
+
+def test_answer_ollama_first_default(monkeypatch):
+    # Default chatbot provider is Ollama-first: Ollama answer wins.
+    calls = _patch(monkeypatch, key="sk-x", openai_ret="OAI", ollama_ret="OLLAMA_ANSWER")
+    out = llm.answer_drug_question("부작용은?", CTX, provider=llm.PROVIDER_OLLAMA)
+    assert out == "OLLAMA_ANSWER"
+    assert calls["openai"] == 0
 
 
 def test_answer_falls_back_to_rule_when_llm_unavailable(monkeypatch):

@@ -10,14 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.data_loader import load_drug_reviews
-from src.features import add_features
-
-
-@st.cache_data(show_spinner="데이터 조회 준비 중...")
-def get_data(max_rows: int):
-    df, source = load_drug_reviews(max_rows=max_rows)
-    return add_features(df), source
+from src.data_cache import get_prepared_data
 
 
 st.title("데이터 조회")
@@ -26,7 +19,7 @@ st.caption("원본 컬럼과 특성 엔지니어링 결과를 검색하고 내�
 with st.sidebar:
     max_rows = st.number_input("최대 로딩 행 수", min_value=500, max_value=200_000, value=50_000, step=5_000)
 
-df, source = get_data(int(max_rows))
+df, source, _ = get_prepared_data(int(max_rows), False)
 
 with st.form("search_form"):
     col1, col2, col3 = st.columns(3)

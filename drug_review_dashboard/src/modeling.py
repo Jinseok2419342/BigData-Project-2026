@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
-from .features import MODEL_FEATURES, add_features
+from .features import MODEL_FEATURES, ensure_features
 
 
 @dataclass
@@ -57,7 +57,7 @@ def _score(y_true, pred, proba=None) -> dict:
 
 
 def train_risk_model(df: pd.DataFrame, sample_size: int = 20_000) -> ModelBundle:
-    data = add_features(df)
+    data = ensure_features(df)
     data = data.dropna(subset=["review", "risk_label"]).copy()
     data = data[data["review"].str.strip().astype(bool)]
 

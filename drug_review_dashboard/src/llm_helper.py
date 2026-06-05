@@ -106,31 +106,38 @@ def route_chat(
     ollama_model: str = DEFAULT_OLLAMA_MODEL,
     api_key: str | None = None,
 ) -> str | None:
-    """Route a single-prompt chat request following the configured priority.
+    """Route a single-prompt chat request following an **Ollama-first** chain.
 
-    Priority / fallback (per project spec):
-      1. provider == openai: try OpenAI (if a key is available), then Ollama.
-      2. provider == ollama: try local Ollama only.
-      3. provider == offline: skip all LLMs.
-    Returns the model text, or ``None`` if every LLM path is unavailable/failed
-    (the caller then uses the rule-based fallback).
+    Priority / fallback:
+      1. Local Ollama (gemma3) is always tried first.
+      2. OpenAI API (gpt-4o-mini) is the backup when a key is available — used
+         if Ollama is off/unavailable/failing.
+      3. Offline rule-based (caller handles): returned as ``None`` here.
+
+    Provider selection only changes which engine *leads*:
+      - provider == ollama (default): Ollama -> OpenAI backup.
+      - provider == openai: OpenAI -> Ollama backup (explicit OpenAI-first).
+      - provider == offline: skip all LLMs (returns None).
     """
     if provider == PROVIDER_OFFLINE:
         return None
 
-    # Selected provider first, then a safe fallback order.
-    order = [PROVIDER_OPENAI, PROVIDER_OLLAMA] if provider == PROVIDER_OPENAI else [PROVIDER_OLLAMA]
+    # Ollama-first by default; only an explicit OpenAI choice leads with OpenAI.
+    if provider == PROVIDER_OPENAI:
+        order = [PROVIDER_OPENAI, PROVIDER_OLLAMA]
+    else:
+        order = [PROVIDER_OLLAMA, PROVIDER_OPENAI]
 
     for p in order:
-        if p == PROVIDER_OPENAI:
+        if p == PROVIDER_OLLAMA:
+            text = _ollama_chat(prompt, system, ollama_model)
+            if text:
+                return text
+        elif p == PROVIDER_OPENAI:
             key = api_key or get_openai_api_key()
             if not key:
                 continue
             text = _openai_chat(prompt, system, openai_model, key)
-            if text:
-                return text
-        elif p == PROVIDER_OLLAMA:
-            text = _ollama_chat(prompt, system, ollama_model)
             if text:
                 return text
     return None

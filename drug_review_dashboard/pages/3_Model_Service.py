@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.data_loader import load_drug_reviews
-from src.features import add_features, make_prediction_frame
+from src.data_cache import get_prepared_data
+from src.features import make_prediction_frame
 from src.llm_helper import (
     PROVIDER_OFFLINE,
     PROVIDER_OLLAMA,
@@ -24,23 +24,21 @@ from src.llm_helper import (
     openai_available,
     try_ollama_vision,
 )
-
-PROVIDER_LABELS = {
-    "OpenAI API": PROVIDER_OPENAI,
-    "로컬 Ollama": PROVIDER_OLLAMA,
-    "오프라인(규칙 기반)": PROVIDER_OFFLINE,
-}
 from src.modeling import predict_risk, train_risk_model
 
+# Ollama-first priority chain (Ollama -> OpenAI backup -> rule-based).
+PROVIDER_LABELS = {
+    "로컬 Ollama 우선 (자동: Ollama→OpenAI→규칙)": PROVIDER_OLLAMA,
+    "OpenAI 우선 (OpenAI→Ollama→규칙)": PROVIDER_OPENAI,
+    "오프라인(규칙 기반)": PROVIDER_OFFLINE,
+}
 
-@st.cache_data(show_spinner="모델용 데이터 로딩 중...")
-def get_data(max_rows: int):
-    df, source = load_drug_reviews(max_rows=max_rows)
-    return add_features(df), source
 
-
-@st.cache_resource(show_spinner="RandomForest 모델 학습 중...")
-def get_model(df: pd.DataFrame, sample_size: int):
+@st.cache_resource(show_spinner="RandomForest 모델 학습 중... (최초 1회만 실행)")
+def get_model(max_rows: int, sample_size: int):
+    # Keyed on scalar params (not the DataFrame) so Streamlit doesn't re-hash
+    # 50k+ rows on every rerun. Loads the shared cached data internally.
+    df, _, _ = get_prepared_data(max_rows, False)
     return train_risk_model(df, sample_size=sample_size)
 
 
@@ -60,17 +58,18 @@ with st.sidebar:
     sample_size = st.number_input("모델 학습 샘플 수", min_value=500, max_value=50_000, value=12_000, step=1_000)
     st.markdown("---")
     st.subheader("LLM 리포트 엔진")
-    provider_label = st.radio("백엔드 선택", list(PROVIDER_LABELS.keys()), index=2)
+    provider_label = st.radio("백엔드 선택", list(PROVIDER_LABELS.keys()), index=0)
     report_provider = PROVIDER_LABELS[provider_label]
+    st.caption("기본은 로컬 Ollama 우선, 실패 시 OpenAI(키 있을 때) → 규칙 기반 순으로 자동 대체됩니다.")
     if openai_available():
-        st.caption("✅ OPENAI_API_KEY 감지됨")
+        st.caption("✅ OPENAI_API_KEY 감지됨 (백업 사용 가능)")
     else:
-        st.caption("⚠️ OPENAI_API_KEY 없음 — OpenAI 선택 시 Ollama→규칙 순으로 대체")
-    openai_model = st.text_input("OpenAI 모델명", value="gpt-4o-mini", disabled=report_provider != PROVIDER_OPENAI)
+        st.caption("⚠️ OPENAI_API_KEY 없음 — Ollama 실패 시 바로 규칙 기반으로 대체")
     ollama_model = st.text_input("Ollama 모델명", value="gemma3", disabled=report_provider == PROVIDER_OFFLINE)
+    openai_model = st.text_input("OpenAI 모델명(백업)", value="gpt-4o-mini", disabled=report_provider == PROVIDER_OFFLINE)
 
-df, source = get_data(int(max_rows))
-bundle = get_model(df, int(sample_size))
+df, source, _ = get_prepared_data(int(max_rows), False)
+bundle = get_model(int(max_rows), int(sample_size))
 
 metric_cols = st.columns(5)
 metric_cols[0].metric("학습 데이터", f"{bundle.train_rows:,}건")

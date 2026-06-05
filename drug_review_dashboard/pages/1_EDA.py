@@ -12,14 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.data_loader import load_drug_reviews
-from src.features import add_features
-
-
-@st.cache_data(show_spinner="약물 리뷰 데이터 로딩 중...")
-def get_data(max_rows: int, prefer_kaggle: bool):
-    df, source = load_drug_reviews(max_rows=max_rows, prefer_kaggle=prefer_kaggle)
-    return add_features(df), source, df.attrs.get("load_warning", "")
+from src.data_cache import get_prepared_data
 
 
 st.title("약물 리뷰 EDA 대시보드")
@@ -30,7 +23,7 @@ with st.sidebar:
     max_rows = st.number_input("최대 로딩 행 수", min_value=500, max_value=200_000, value=50_000, step=5_000)
     prefer_kaggle = st.toggle("KaggleHub 우선 시도", value=False)
 
-df, source, warning = get_data(int(max_rows), prefer_kaggle)
+df, source, warning = get_prepared_data(int(max_rows), prefer_kaggle)
 
 if warning:
     st.info(f"실제 데이터 로딩에 실패해 데모 샘플을 사용 중입니다. 원인: {warning}")
