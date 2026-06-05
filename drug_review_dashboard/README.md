@@ -9,6 +9,23 @@
 | **3. 프로젝트 범위 조정 (이미지 인식 기능)** | "수업 프로젝트에서는 핵심을 텍스트 기반 부작용 위험 신호 탐지에 두는 것이 가장 좋고, 이미지 입력은 과감히 빼는 편이 안전합니다." | 교수님의 의견을 적극 수용하여, 텍스트 기반 위험 탐지 파이프라인 및 AI 챗봇을 프로젝트의 메인 주인공으로 설정함. 우려하셨던 약통 이미지 OCR 기능은 메인 시스템을 방해하지 않도록 별도의 '보너스 멀티모달 탭'으로 완전히 격리(Decoupled)하고, 로컬 비전 모델 미구동 시에도 대시보드가 터지지 않도록 예외 처리(Fallback) 안전장치를 완벽히 구축함. |
 | **4. 데이터셋 라이선스 명확화** | "UCI 원본 라이선스 설명은 일부 부정확할 가능성이 있습니다... 정확한 라이선스 문구를 정리하는 것이 좋습니다." | UCI Druglib.com 원본 데이터셋의 라이선스가 'CC BY 4.0' 규격을 따름을 명확히 확인하고, Kaggle 재배포본과의 대조 결과를 문서에 공식 명시하여 법적/학술적 리스크를 완전히 제거함. |
 
+## 🏗️ 시스템 아키텍처 (R&D → Production)
+
+> **모든 전처리, EDA, 특성 엔지니어링 실험 및 검증은 `notebooks/` 파이프라인(주피터 랩 환경)에서 선행 연구 및 자산화되었습니다.**
+>
+> **Streamlit 대시보드는 주피터 랩에서 완벽히 검증된 공통 핵심 데이터 모듈(`src/`)을 그대로 재사용(Reflect)하여 실시간 서비스 배포를 수행하는 구조로, R&D와 Production이 유기적으로 연결된 정석적 아키텍처를 충족합니다.**
+
+- **공통 핵심 모듈 (Single Source of Truth)**: `src/data_loader.py`(`load_drug_reviews`) · `src/features.py`(`add_features`) · `src/data_cache.py`(`prepare_data`)
+- **R&D / Lab**: `notebooks/EDA_and_Preprocessing_Analysis.ipynb` 에서 전처리·특성 로직을 정의·검증·증명
+- **Production**: Streamlit 앱(`pages/`)이 동일한 `src/` 모듈을 import 하여 서비스. `get_prepared_data()`는 `prepare_data()`의 캐시(@st.cache_data) 래퍼일 뿐 핵심 로직은 동일
+- **동일성 보장**: 노트북 로직(`prepare_data`)과 앱 로직(`get_prepared_data`)의 데이터 형상·컬럼·특성 출력이 **완전히 동일**함을 확인(동일 shape·dtype·특성 해시)
+
+```
+src/ (공통 핵심 모듈: load_drug_reviews → add_features → prepare_data)
+        │                              │
+   notebooks/ (R&D·검증·증명)     pages/ (Production·실시간 서비스, get_prepared_data 캐시)
+```
+
 ---
 
 UCI ML Drug Review dataset을 이용해 환자 리뷰에서 심각한 부작용(ADE) 위험군을 탐지하는 수업용 프로젝트입니다.

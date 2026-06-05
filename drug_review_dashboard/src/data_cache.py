@@ -19,13 +19,24 @@ from .data_loader import load_drug_reviews
 from .features import add_features, get_drug_summary
 
 
-@st.cache_data(show_spinner="데이터 로딩·전처리 중... (최초 1회만 실행)")
-def get_prepared_data(max_rows: int = 50_000, prefer_kaggle: bool = False):
-    """Load + clean + feature-engineer once. Returns (featured_df, source, warning)."""
+def prepare_data(max_rows: int = 50_000, prefer_kaggle: bool = False):
+    """Load + clean + feature-engineer the dataset. Returns (featured_df, source, warning).
+
+    This is the **single shared core pipeline** proven in the Jupyter notebook
+    (notebooks/EDA_and_Preprocessing_Analysis.ipynb) and reused, unchanged, by the
+    Streamlit app. It is a plain function (no Streamlit dependency) so the notebook
+    can call the exact same preprocessing/feature-engineering the app serves.
+    """
     df, source = load_drug_reviews(max_rows=max_rows, prefer_kaggle=prefer_kaggle)
     featured = add_features(df)
     warning = df.attrs.get("load_warning", "")
     return featured, source, warning
+
+
+@st.cache_data(show_spinner="데이터 로딩·전처리 중... (최초 1회만 실행)")
+def get_prepared_data(max_rows: int = 50_000, prefer_kaggle: bool = False):
+    """Streamlit-cached wrapper around prepare_data() — identical output, cached once."""
+    return prepare_data(max_rows, prefer_kaggle)
 
 
 @st.cache_data(show_spinner=False)
