@@ -147,6 +147,46 @@ def _load_local_csvs(max_rows: int | None = None) -> tuple[pd.DataFrame, str]:
     return _standardize_columns(df), "local: " + ", ".join(used_files)
 
 
+def _kagglehub_versions_dir() -> Path:
+    cache_root = Path(os.environ.get("KAGGLEHUB_CACHE", str(PROJECT_DIR / ".kagglehub_cache")))
+    return cache_root / "datasets" / DATASET_SLUG / "versions"
+
+
+def _load_kaggle_cache(max_rows: int | None = None) -> tuple[pd.DataFrame, str]:
+    """Read the already-downloaded KaggleHub CSVs directly from the local cache.
+
+    KaggleHub's dataset_download() makes a network call on every load even when
+    the file is cached, and a transient connection error would otherwise drop the
+    app to demo data. Reading the cached files directly makes loading fast,
+    offline-robust, and deterministic, so the notebook and app never diverge.
+    """
+    versions = _kagglehub_versions_dir()
+    if not versions.exists():
+        raise FileNotFoundError("No KaggleHub cache directory found.")
+
+    frames: list[pd.DataFrame] = []
+    used_files: list[str] = []
+    for version_dir in sorted((p for p in versions.iterdir() if p.is_dir()), reverse=True):
+        present = [version_dir / name for name in KAGGLE_FILES if (version_dir / name).exists()]
+        if not present:
+            continue
+        for path in present:
+            remaining = None if max_rows is None else max(max_rows - sum(len(f) for f in frames), 0)
+            if remaining == 0:
+                break
+            frames.append(_read_csv(path, remaining))
+            used_files.append(path.name)
+        break  # use the newest version that has the files
+
+    if not frames:
+        raise FileNotFoundError("No cached KaggleHub CSV files found.")
+
+    df = pd.concat(frames, ignore_index=True)
+    if max_rows is not None:
+        df = df.head(max_rows)
+    return _standardize_columns(df), "kaggle cache: " + ", ".join(used_files)
+
+
 def _load_kagglehub(max_rows: int | None = None) -> tuple[pd.DataFrame, str]:
     os.environ.setdefault("KAGGLEHUB_CACHE", str(PROJECT_DIR / ".kagglehub_cache"))
     _patch_kagglesdk_for_kagglehub()
@@ -246,13 +286,14 @@ def load_drug_reviews(
 
     Priority:
     1. local CSV files in data/
-    2. KaggleHub dataset adapter
-    3. generated demo data, so the app still opens during development
+    2. already-downloaded KaggleHub cache (read directly, no network)
+    3. KaggleHub network download (first-time fetch)
+    4. generated demo data, so the app still opens during development
     """
     loaders: Iterable = (
-        (_load_kagglehub, _load_local_csvs)
+        (_load_kaggle_cache, _load_kagglehub, _load_local_csvs)
         if prefer_kaggle
-        else (_load_local_csvs, _load_kagglehub)
+        else (_load_local_csvs, _load_kaggle_cache, _load_kagglehub)
     )
 
     last_error = None
