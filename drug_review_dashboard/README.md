@@ -92,6 +92,23 @@ Copy-Item .env.example .env
 
 키는 streamlit secrets(`.streamlit/secrets.toml`의 `OPENAI_API_KEY`) → `.env`/환경변수 순으로 탐색합니다.
 
+## Jupyter Notebook 실행 방법
+
+EDA·전처리·특성 엔지니어링 전 과정을 정리한 노트북이 `notebooks/EDA_and_Preprocessing_Analysis.ipynb` 에 있습니다. JupyterLab에서 셀을 위에서부터 실행하면 215k행 적재 → 정제 → 6개 그림 → 누수 before/after까지 재현됩니다.
+
+```bash
+# (가상환경 활성화 후) 의존성 설치 — jupyterlab 포함
+pip install -r requirements.txt
+
+# 프로젝트 폴더(drug_review_dashboard)에서 JupyterLab 실행
+jupyter lab
+```
+
+JupyterLab이 브라우저에서 열리면 왼쪽 파일 탐색기에서 `notebooks/EDA_and_Preprocessing_Analysis.ipynb` 를 더블클릭해 엽니다. 상단 메뉴 **Run → Run All Cells** 로 전체를 실행할 수 있습니다(전체 데이터 적재·모델 비교 포함 약 1~2분 소요).
+
+> 특정 노트북만 바로 열려면: `jupyter lab notebooks/EDA_and_Preprocessing_Analysis.ipynb`
+> 커널은 이 프로젝트의 가상환경(venv) Python을 사용해야 `src/` 모듈이 import 됩니다.
+
 ## 테스트
 
 LLM 라우팅/폴백 로직 단위 테스트:
