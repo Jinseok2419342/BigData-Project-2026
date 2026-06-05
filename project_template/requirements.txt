@@ -1,0 +1,13 @@
+# 기말 프로젝트 의존성 — 쓰는 것만 남기고 나머지는 지워도 됩니다.
+streamlit
+pandas
+numpy
+plotly
+altair
+scikit-learn
+# --- 이미지/텍스트 모델을 쓸 때만 ---
+# transformers
+# torch
+# pillow
+# --- Ollama LLM을 쓸 때만 ---
+# ollama
