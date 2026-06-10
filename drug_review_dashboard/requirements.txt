@@ -1,4 +1,5 @@
-streamlit>=1.40
+# width="stretch" API 사용 — 1.49 미만에서는 미지원
+streamlit>=1.49
 pandas>=2.0
 numpy>=1.26
 plotly>=5.20
@@ -12,3 +13,5 @@ python-dotenv>=1.0
 matplotlib>=3.8
 seaborn>=0.13
 jupyterlab>=4.0
+# 단위 테스트(tests/)
+pytest>=8.0

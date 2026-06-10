@@ -29,7 +29,7 @@ with st.form("search_form"):
         drug_keyword = st.text_input("약물명 검색", placeholder="Sertraline ...")
     with col3:
         risk_choice = st.multiselect("위험 라벨", ["안전군", "위험군"], default=["안전군", "위험군"])
-    submitted = st.form_submit_button("검색", use_container_width=True)
+    submitted = st.form_submit_button("검색", width="stretch")
 
 risk_map = {"안전군": 0, "위험군": 1}
 filtered = df[df["risk_label"].isin([risk_map[name] for name in risk_choice])].copy()
@@ -55,7 +55,7 @@ selected_cols = st.multiselect("표시 컬럼", df.columns.tolist(), default=[c 
 if selected_cols:
     st.dataframe(
         filtered[selected_cols],
-        use_container_width=True,
+        width="stretch",
         height=520,
         column_config={
             "review": st.column_config.TextColumn("리뷰", width="large"),

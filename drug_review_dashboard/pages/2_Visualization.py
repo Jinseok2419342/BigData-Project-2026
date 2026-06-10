@@ -45,7 +45,11 @@ with left:
         hover_data=["reviews", "condition"],
     )
     fig.update_layout(height=560)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
+    st.caption(
+        "해석: 위험군 비율 상위 약물은 막대 색(평균 평점)이 대부분 붉은 저평점 구간에 몰려 있습니다. "
+        "즉 위험 신호가 많은 약물일수록 사용자 만족도도 낮아, 약한 라벨이 평점과 일관된 방향임을 확인할 수 있습니다."
+    )
 
 with right:
     st.subheader("평점 대비 위험군 산점도")
@@ -59,7 +63,11 @@ with right:
         labels={"avg_rating": "평균 평점", "risk_ratio": "위험군 비율(%)", "reviews": "리뷰 수"},
     )
     fig.update_layout(height=560, legend_title_text="주요 질환")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
+    st.caption(
+        "해석: 평균 평점이 낮을수록 위험군 비율이 높아지는 뚜렷한 우하향 관계가 보입니다. "
+        "다만 같은 평점대에서도 위험군 비율 편차가 커서, 평점만으로는 부족하고 리뷰 텍스트 신호가 필요함을 보여줍니다."
+    )
 
 st.divider()
 
@@ -87,7 +95,11 @@ with tab_rating:
             color_discrete_map={0: "#0f9f8f", 1: "#dc2626"},
             labels={"rating": "평점", "risk_label": "위험 라벨"},
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+        st.caption(
+            "해석: 선택 약물에서도 위험군(빨강)은 1~3점, 안전군(청록)은 8~10점에 몰리는 양극화가 재현됩니다. "
+            "전체 데이터의 J자형 분포가 개별 약물 수준에서도 유지된다는 뜻입니다."
+        )
 
     with col2:
         st.subheader("상위 약물 평점 Box Plot")
@@ -101,7 +113,11 @@ with tab_rating:
             labels={"drug_name": "약물명", "rating": "평점"},
         )
         fig.update_layout(showlegend=False, xaxis_tickangle=-35)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+        st.caption(
+            "해석: 위험군 비율 상위 약물들은 평점 중앙값 자체가 낮고 박스 폭(IQR)이 넓어 평가가 크게 갈립니다. "
+            "박스 아래 수염 밖 점들이 IQR 기준 낮은 평점 이상치로, 아래 기준값 안내와 연결됩니다."
+        )
 
     cutoff = drug_df["drug_low_outlier_cutoff"].iloc[0] if len(drug_df) else 0
     outliers = drug_df[drug_df["rating_iqr_low_outlier"] == 1]
@@ -126,7 +142,7 @@ with tab_keywords:
                 color_discrete_sequence=["#dc2626"],
                 labels={"count": "빈도", "keyword": "키워드"},
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     with col2:
         st.subheader("안전군/일반 리뷰 키워드")
@@ -142,7 +158,12 @@ with tab_keywords:
                 color_discrete_sequence=["#0f9f8f"],
                 labels={"count": "빈도", "keyword": "키워드"},
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
+
+    st.caption(
+        "해석: 위험군 리뷰에는 pain·effects·severe 같은 증상/부작용 어휘가, 안전군 리뷰에는 효과·만족 관련 어휘가 상위에 옵니다. "
+        "두 집단의 어휘가 뚜렷이 갈리므로 리뷰 원문(TF-IDF)이 실제 분류 신호가 된다는 근거입니다."
+    )
 
 with tab_trend:
     dated = drug_df.dropna(subset=["date"]).copy()
@@ -164,5 +185,8 @@ with tab_trend:
             labels={"month": "월", "value": "값", "variable": "지표"},
             hover_data=["reviews"],
         )
-        st.plotly_chart(fig, use_container_width=True)
-        st.caption("평점 평균과 위험군 비율이 같은 방향으로 움직이는지 확인해 약물별 모니터링 포인트를 잡습니다.")
+        st.plotly_chart(fig, width="stretch")
+        st.caption(
+            "해석: 평점 평균과 위험군 비율이 반대 방향으로 움직이는지(평점 하락 → 위험 비율 상승) 월별로 확인합니다. "
+            "두 지표가 동시에 악화되는 구간이 해당 약물의 집중 모니터링 포인트입니다."
+        )
