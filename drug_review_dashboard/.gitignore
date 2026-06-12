@@ -9,3 +9,8 @@ models/
 *.pkl
 # 실제 API 키 보호 (.env.example 은 커밋됨)
 .env
+# 데이터 파일은 라이선스(연구목적·재배포 제한)와 용량 때문에 커밋하지 않는다.
+# data/README.md 안내문만 커밋되고, CSV/ZIP은 제외 — 출처 URL은 보고서에 명시.
+data/*.csv
+data/*.zip
+venv/

@@ -22,7 +22,7 @@ from src.llm_helper import (
     build_rule_based_report,
     generate_report,
     openai_available,
-    try_ollama_vision,
+    recognize_drug_image,
 )
 from src.modeling import predict_risk, train_risk_model
 
@@ -130,8 +130,12 @@ left, right = st.columns([0.95, 1.05])
 with left:
     st.subheader("사용자 입력")
     uploaded = st.file_uploader("약통 이미지 업로드", type=["png", "jpg", "jpeg"])
-    use_vision = st.toggle("이미지 멀티모달 인식(Ollama) 시도", value=False,
-                           help="로컬 Ollama의 비전 모델(gemma3 등)로 약통 글자를 읽어 약물명을 매칭합니다. 실패 시 파일명 기반으로 대체합니다.")
+    use_vision = st.toggle(
+        "이미지 멀티모달 인식(Ollama/OpenAI) 시도",
+        value=False,
+        help="사이드바에서 고른 LLM 엔진 순서대로(기본: 로컬 Ollama → OpenAI 백업) 약통 글자를 읽어 "
+             "약물명을 매칭합니다. 둘 다 실패하면 파일명 기반 매칭으로 대체합니다.",
+    )
     guessed = None
     if uploaded is not None:
         image_bytes = uploaded.getvalue()
@@ -139,25 +143,41 @@ with left:
         st.image(image, caption="업로드한 이미지", use_container_width=True)
 
         if use_vision:
-            with st.spinner("Ollama 비전 모델로 약통을 인식하는 중..."):
-                vision = try_ollama_vision(image_bytes, drug_options, model="gemma3")
+            # 비전 호출도 route_chat과 같은 폴백 체인(recognize_drug_image)을 쓴다.
+            # 사이드바에서 고른 엔진/모델명이 그대로 적용된다.
+            with st.spinner("비전 모델로 약통을 인식하는 중... (Ollama → OpenAI 순서로 시도)"):
+                vision = recognize_drug_image(
+                    image_bytes,
+                    drug_options,
+                    provider=report_provider,
+                    ollama_model=ollama_model,
+                    openai_model=openai_model,
+                )
             if vision is None:
-                st.caption("Ollama 비전 호출 실패 → 파일명 기반 매칭으로 대체합니다.")
+                st.warning(
+                    "비전 모델 호출에 모두 실패했습니다 → 파일명 기반 매칭으로 대체합니다. "
+                    "(로컬 Ollama 미실행이면 OPENAI_API_KEY가 .env에 있어야 OpenAI 백업이 동작합니다. "
+                    "오프라인 모드에서는 비전 인식이 비활성화됩니다.)"
+                )
             else:
                 guessed = vision.get("matched")
+                engine_name = {"ollama": "로컬 Ollama", "openai": "OpenAI"}.get(vision.get("engine", ""), "LLM")
                 with st.popover("모델이 읽은 내용 보기"):
                     st.text(vision.get("raw", ""))
                 if guessed:
-                    st.success(f"멀티모달 인식 결과 약물 후보: {guessed}")
+                    st.success(f"멀티모달 인식 결과 약물 후보: {guessed} (엔진: {engine_name})")
                 else:
-                    st.caption("이미지에서 데이터셋 약물과 일치하는 이름을 찾지 못했습니다.")
+                    st.caption(f"{engine_name}이 이미지를 읽었지만, 데이터셋 약물 목록과 일치하는 이름을 찾지 못했습니다.")
 
         if guessed is None:
             guessed = guess_drug_from_filename(uploaded.name, drug_options)
             if guessed:
                 st.caption(f"파일명에서 약물 후보를 찾았습니다: {guessed}")
-            elif not use_vision:
-                st.caption("이미지 미리보기 + 파일명 기반 후보 매칭을 지원합니다. (멀티모달은 위 토글)")
+            else:
+                st.caption(
+                    "파일명에서도 약물명을 찾지 못했습니다. 파일명 매칭은 파일 이름에 데이터셋 약물명이 "
+                    "포함되어야 동작합니다 (예: sertraline.jpg). 아래에서 직접 선택해 주세요."
+                )
 
     selected = st.selectbox(
         "약물명 선택",
@@ -184,9 +204,11 @@ with right:
         probability = result["risk_probability"]
         iqr_flag = bool(pred_row["rating_iqr_low_outlier"].iloc[0])
 
+        # st.metric은 칸 폭을 넘는 긴 문자열을 말줄임표로 자르므로,
+        # 분류 결과는 짧은 라벨로 표시하고 전체 문구는 툴팁(help)에 담는다.
         r1, r2, r3 = st.columns(3)
         r1.metric("위험도 점수", f"{probability * 100:.1f}%")
-        r2.metric("분류 결과", result["label"])
+        r2.metric("분류 결과", "위험군" if result["prediction"] else "안전군", help=result["label"])
         r3.metric("IQR 이상치", "감지" if iqr_flag else "미감지")
 
         st.progress(probability)

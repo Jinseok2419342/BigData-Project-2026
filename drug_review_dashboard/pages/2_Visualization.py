@@ -46,6 +46,7 @@ with left:
     )
     fig.update_layout(height=560)
     st.plotly_chart(fig, use_container_width=True)
+    st.caption("→ 위험군 비율 상위 약물은 평균 평점(막대 색)도 낮은 경향이다. 텍스트 기반 위험 신호와 평점 신호가 일관되게 움직여, 두 신호를 함께 쓰는 근거가 된다.")
 
 with right:
     st.subheader("평점 대비 위험군 산점도")
@@ -60,6 +61,7 @@ with right:
     )
     fig.update_layout(height=560, legend_title_text="주요 질환")
     st.plotly_chart(fig, use_container_width=True)
+    st.caption("→ 평균 평점이 낮을수록 위험군 비율이 높아지는 음(−)의 관계가 보인다. 점이 작은(리뷰가 적은) 약물은 비율이 과장될 수 있어 최소 리뷰 수 필터를 적용했다.")
 
 st.divider()
 
@@ -88,6 +90,7 @@ with tab_rating:
             labels={"rating": "평점", "risk_label": "위험 라벨"},
         )
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("→ 선택 약물에서 위험군(빨강)이 어느 평점대에 몰리는지 보여준다. 1~3점에 집중될수록 평점·텍스트 신호가 일치하는 약물이다.")
 
     with col2:
         st.subheader("상위 약물 평점 Box Plot")
@@ -102,6 +105,7 @@ with tab_rating:
         )
         fig.update_layout(showlegend=False, xaxis_tickangle=-35)
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("→ 약물마다 평점의 중앙값과 IQR(상자 폭)이 크게 다르다. 전체 기준이 아닌 **약물별 IQR 기준**으로 낮은 평점 이상치를 잡는 근거다.")
 
     cutoff = drug_df["drug_low_outlier_cutoff"].iloc[0] if len(drug_df) else 0
     outliers = drug_df[drug_df["rating_iqr_low_outlier"] == 1]
@@ -127,6 +131,7 @@ with tab_keywords:
                 labels={"count": "빈도", "keyword": "키워드"},
             )
             st.plotly_chart(fig, use_container_width=True)
+            st.caption("→ 위험군 리뷰에는 심각 증상 계열 단어가 상위에 온다. 약한 라벨이 실제 텍스트 신호와 정합함을 보여준다.")
 
     with col2:
         st.subheader("안전군/일반 리뷰 키워드")
@@ -143,6 +148,7 @@ with tab_keywords:
                 labels={"count": "빈도", "keyword": "키워드"},
             )
             st.plotly_chart(fig, use_container_width=True)
+            st.caption("→ 안전군 리뷰는 효과·개선 계열 단어가 상위다. 두 군의 어휘가 뚜렷이 갈리는 것이 리뷰 원문 TF-IDF만으로도 분류가 가능한 이유다.")
 
 with tab_trend:
     dated = drug_df.dropna(subset=["date"]).copy()

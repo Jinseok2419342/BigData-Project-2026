@@ -118,6 +118,12 @@ def route_chat(
       - provider == ollama (default): Ollama -> OpenAI backup.
       - provider == openai: OpenAI -> Ollama backup (explicit OpenAI-first).
       - provider == offline: skip all LLMs (returns None).
+
+    [한국어] LLM 라우팅의 단일 관문 — 앱의 모든 LLM 호출이 이 함수를 거친다.
+    우선순위: 로컬 Ollama(gemma3, 무료·오프라인) → OpenAI(gpt-4o-mini, 키 있을 때만)
+    → None 반환(호출부가 규칙 기반 답변으로 대체). 각 단계는 예외를 삼키고
+    다음 단계로 넘어가므로, 모델이 꺼져 있거나 키가 없어도 앱은 절대 죽지 않는다.
+    이 폴백 체인은 tests/test_llm_routing.py의 18개 단위 테스트로 검증된다.
     """
     if provider == PROVIDER_OFFLINE:
         return None
@@ -312,12 +318,14 @@ def _rule_based_answer(question: str, ctx: dict) -> str:
     kw = ", ".join(ctx["keywords"][:6]) if ctx["keywords"] else "뚜렷한 키워드 없음"
     example = ctx["examples"][0] if ctx["examples"] else None
 
+    # [한국어] 질문 의도를 간단한 키워드 매칭으로 분류해 통계 기반 답변을 고른다.
+    # 영어 토큰도 잡히도록 소문자로 정규화한 q를 사용한다(한글은 영향 없음).
     q = (question or "").lower()
-    if any(token in question for token in ["부작용", "증상", "side", "효과"]):
+    if any(token in q for token in ["부작용", "증상", "side", "효과"]):
         focus = f"환자들이 가장 많이 보고한 부작용/증상 키워드는 **{kw}** 입니다."
-    elif any(token in question for token in ["주의", "조심", "위험", "caution", "warn"]):
+    elif any(token in q for token in ["주의", "조심", "위험", "caution", "warn"]):
         focus = f"이 약물의 위험군 리뷰 비율은 **{risk}** 이며, 자주 등장하는 위험 신호 키워드는 **{kw}** 입니다."
-    elif any(token in question for token in ["평점", "효능", "좋", "rating", "효과있"]):
+    elif any(token in q for token in ["평점", "효능", "좋", "rating", "효과있"]):
         focus = f"전체 리뷰 평균 평점은 **{avg}** 입니다(10점 만점)."
     else:
         focus = f"평균 평점 **{avg}**, 위험군 비율 **{risk}**, 주요 키워드 **{kw}** 로 요약됩니다."
@@ -331,6 +339,116 @@ def _rule_based_answer(question: str, ctx: dict) -> str:
     )
 
 
+def _vision_prompt(options: list[str]) -> str:
+    # [한국어] 비전 모델 공용 프롬프트 — 이미지에서 약물명을 읽고,
+    # 데이터셋에 존재하는 약물 목록과 정확히 일치하는 이름을 고르게 한다.
+    option_hint = ", ".join(options[:60]) if options else "(no list provided)"
+    return (
+        "You are reading a photo of a medicine bottle or pill packaging for a "
+        "class project. Identify the drug/brand name visible in the image. "
+        "Then, if it matches one of these known drug names, return that exact "
+        f"name; otherwise say UNKNOWN.\nKnown names: {option_hint}\n"
+        "Answer on two lines:\nNAME: <drug name you read or UNKNOWN>\n"
+        "MATCH: <one exact name from the list, or NONE>"
+    )
+
+
+def _match_from_vision_text(text: str, options: list[str]) -> str | None:
+    # [한국어] 모델 답변에서 "MATCH:" 줄을 우선 파싱하고,
+    # 실패하면 답변 전체에서 약물명 부분 문자열을 탐색한다(관대한 매칭).
+    matched = None
+    lower_opts = {opt.lower(): opt for opt in options}
+    for line in text.splitlines():
+        if line.upper().startswith("MATCH:"):
+            candidate = line.split(":", 1)[1].strip()
+            matched = lower_opts.get(candidate.lower())
+    if matched is None:
+        low = text.lower()
+        for opt in options:
+            if opt.lower() in low:
+                matched = opt
+                break
+    return matched
+
+
+def _ollama_vision(image_bytes: bytes, prompt: str, model: str) -> str | None:
+    try:
+        import ollama
+
+        response = ollama.chat(
+            model=model,
+            messages=[{"role": "user", "content": prompt, "images": [image_bytes]}],
+        )
+        return response["message"]["content"]
+    except Exception:
+        return None
+
+
+def _openai_vision(image_bytes: bytes, prompt: str, model: str, api_key: str) -> str | None:
+    # [한국어] OpenAI 멀티모달 호출 — 이미지를 base64 data URL로 전달한다.
+    # gpt-4o-mini 등 비전 지원 모델이면 동작하며, 실패 시 None(폴백 계속).
+    try:
+        import base64
+
+        from openai import OpenAI
+
+        media = "image/png" if image_bytes[:4] == b"\x89PNG" else "image/jpeg"
+        b64 = base64.b64encode(image_bytes).decode("ascii")
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:{media};base64,{b64}"}},
+                    ],
+                }
+            ],
+            temperature=0,
+        )
+        return response.choices[0].message.content
+    except Exception:
+        return None
+
+
+def recognize_drug_image(
+    image_bytes: bytes,
+    options: list[str],
+    provider: str = PROVIDER_OLLAMA,
+    *,
+    ollama_model: str = DEFAULT_OLLAMA_MODEL,
+    openai_model: str = DEFAULT_OPENAI_MODEL,
+    api_key: str | None = None,
+) -> dict | None:
+    """[한국어] 약통 이미지 → 약물명 인식 라우터 (route_chat과 동일한 폴백 철학).
+
+    우선순위: 선택 엔진에 따라 Ollama 비전 ↔ OpenAI 비전(gpt-4o-mini, 키 있을 때)
+    순서로 시도하고, 둘 다 실패하면 None을 반환한다 — 호출부(서비스 페이지)는
+    파일명 기반 매칭으로 폴백하므로 어떤 환경에서도 화면이 깨지지 않는다.
+    반환: {"matched": 목록과 일치한 약물명 | None, "raw": 모델 원문, "engine": 사용 엔진}
+    """
+    if provider == PROVIDER_OFFLINE:
+        return None
+
+    prompt = _vision_prompt(options)
+    order = [PROVIDER_OPENAI, PROVIDER_OLLAMA] if provider == PROVIDER_OPENAI else [PROVIDER_OLLAMA, PROVIDER_OPENAI]
+
+    for p in order:
+        text = None
+        if p == PROVIDER_OLLAMA:
+            text = _ollama_vision(image_bytes, prompt, ollama_model)
+        elif p == PROVIDER_OPENAI:
+            key = api_key or get_openai_api_key()
+            if not key:
+                continue
+            text = _openai_vision(image_bytes, prompt, openai_model, key)
+        if text:
+            return {"matched": _match_from_vision_text(text, options), "raw": text, "engine": p}
+    return None
+
+
 def try_ollama_vision(image_bytes: bytes, options: list[str], model: str = "gemma3") -> dict | None:
     """Multimodal pill-bottle recognition via a local Ollama vision model.
 
@@ -338,37 +456,10 @@ def try_ollama_vision(image_bytes: bytes, options: list[str], model: str = "gemm
     to read any visible drug name and match it to the closest dataset option.
     Returns ``{"matched": <option|None>, "raw": <model text>}`` or ``None`` if
     Ollama / the model is unavailable. The filename heuristic is the fallback.
+
+    [한국어] 하위 호환용 Ollama 전용 헬퍼 — 신규 코드는 recognize_drug_image 사용.
     """
-    try:
-        import ollama
-
-        option_hint = ", ".join(options[:60]) if options else "(no list provided)"
-        prompt = (
-            "You are reading a photo of a medicine bottle or pill packaging for a "
-            "class project. Identify the drug/brand name visible in the image. "
-            "Then, if it matches one of these known drug names, return that exact "
-            f"name; otherwise say UNKNOWN.\nKnown names: {option_hint}\n"
-            "Answer on two lines:\nNAME: <drug name you read or UNKNOWN>\n"
-            "MATCH: <one exact name from the list, or NONE>"
-        )
-        response = ollama.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt, "images": [image_bytes]}],
-        )
-        text = response["message"]["content"]
-
-        matched = None
-        lower_opts = {opt.lower(): opt for opt in options}
-        for line in text.splitlines():
-            if line.upper().startswith("MATCH:"):
-                candidate = line.split(":", 1)[1].strip()
-                matched = lower_opts.get(candidate.lower())
-        if matched is None:  # fall back to substring scan of the whole answer
-            low = text.lower()
-            for opt in options:
-                if opt.lower() in low:
-                    matched = opt
-                    break
-        return {"matched": matched, "raw": text}
-    except Exception:
+    text = _ollama_vision(image_bytes, _vision_prompt(options), model)
+    if not text:
         return None
+    return {"matched": _match_from_vision_text(text, options), "raw": text}

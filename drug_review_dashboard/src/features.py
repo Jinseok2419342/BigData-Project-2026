@@ -1,3 +1,19 @@
+"""특성 엔지니어링 핵심 모듈 — EDA 발견을 모델 특성으로 변환한다.
+
+[EDA 발견 → 특성 설계 흐름 요약]  (상세: docs/특성_엔지니어링.md)
+  1. 평점이 J자형(10점·1점 양극단)            → rating, low_rating_flag, 약물별 IQR 이상치
+  2. 위험군 리뷰가 길고 감정 표현이 강함        → review_length, word_count,
+                                               exclamation_count, uppercase_ratio
+  3. 위험/안전군의 어휘가 뚜렷이 갈림           → severe/symptom/positive_keyword_count,
+                                               리뷰 원문 TF-IDF (modeling.py)
+  4. 약물 3,671종 — 리뷰 수·평점 분포가 제각각  → drug_review_count, drug_avg_rating,
+                                               약물별 IQR 기준 rating_iqr_low_outlier
+  5. 정답(ADE) 라벨이 없음                     → 약한 라벨 build_target()
+     단, 라벨을 정의한 특성은 학습에서 제외      → LABEL_DEFINING_FEATURES / MODEL_FEATURES 분리
+
+원본 컬럼(7개): review_id, drug_name, condition, review, rating, date, useful_count
+나머지 수치 특성은 전부 이 모듈에서 새로 만든(가공·결합·도출한) 특성이다.
+"""
 from __future__ import annotations
 
 import re
@@ -8,6 +24,9 @@ import numpy as np
 import pandas as pd
 
 
+# 약한 라벨의 clause A를 구성하는 "심각(응급) 증상" 키워드 사전.
+# 응급실(er/hospital/emergency), 호흡·심장(breathing/chest pain), 자살사고 등
+# 즉시 조치가 필요한 신호만 모았다. 하나라도 등장하면 평점과 무관하게 위험군.
 SEVERE_KEYWORDS = {
     "anaphylaxis",
     "breathing",
@@ -32,6 +51,9 @@ SEVERE_KEYWORDS = {
     "dehydration",
 }
 
+# 약한 라벨의 clause B에 쓰이는 "일반 부작용 증상" 키워드 사전.
+# 메스꺼움·어지러움처럼 흔한 증상이라 단독으로는 위험이 아니고,
+# "낮은 평점(rating ≤ 3)과 동시에" 등장할 때만 위험 신호로 본다.
 SYMPTOM_KEYWORDS = {
     "nausea",
     "vomiting",
@@ -52,6 +74,9 @@ SYMPTOM_KEYWORDS = {
     "withdrawal",
 }
 
+# 긍정 어휘 사전 — 라벨 정의에는 쓰지 않는 "비누수" 특성용.
+# EDA 키워드 비교에서 안전군 상위 단어(worked/helped/improved...)가 뚜렷해
+# 모델이 안전군 방향의 신호로 활용할 수 있다 (positive_keyword_count).
 POSITIVE_KEYWORDS = {
     "worked",
     "helped",
@@ -89,6 +114,8 @@ STOPWORDS = {
 
 # All engineered numeric columns add_features() produces. Used for EDA,
 # correlation analysis, and the data-explorer page.
+# [한국어] add_features()가 만드는 수치 컬럼 전체 목록 (rating·useful_count만 원본,
+# 나머지 11개는 새로 만든 특성). EDA·상관분석·데이터 조회 페이지에서 사용한다.
 NUMERIC_FEATURES = [
     "rating",
     "useful_count",
@@ -110,6 +137,9 @@ NUMERIC_FEATURES = [
 # leakage), which is why early runs scored ~99% / AUC 1.0. They are excluded
 # from the model so reported metrics reflect honest predictive skill.
 #   label = (severe_keyword_count > 0) OR (rating <= 3 AND symptom_keyword_count > 0)
+# [한국어·핵심] 아래 3개는 약한 라벨을 "정의"한 컬럼이다. 이걸 그대로 학습에 넣으면
+# 모델이 라벨 생성 규칙을 암기해 Acc 99.6%/AUC 1.0이라는 가짜 성능이 나온다(타깃 누수).
+# 그래서 학습 특성에서 완전히 제외하고, EDA/데이터 조회 화면에서만 보여준다.
 LABEL_DEFINING_FEATURES = [
     "severe_keyword_count",
     "symptom_keyword_count",
@@ -120,6 +150,9 @@ LABEL_DEFINING_FEATURES = [
 # is a genuine user-provided signal and, on its own (without the symptom-keyword
 # count), cannot reconstruct the label. The TF-IDF of the raw review text is
 # added on top of these inside the modeling pipeline.
+# [한국어] 모델에 실제로 들어가는 수치 특성 = 전체 − 라벨 정의 3개.
+# rating은 사용자가 직접 준 신호이고, 증상 키워드 수 없이 단독으로는 라벨을
+# 복원할 수 없으므로 의도적으로 유지했다 (보고서 3.3절 참고).
 MODEL_FEATURES = [c for c in NUMERIC_FEATURES if c not in LABEL_DEFINING_FEATURES]
 
 
@@ -156,6 +189,11 @@ def count_keywords(text: str, keywords) -> int:
     Uses a single precompiled regex per set (instead of recompiling one regex
     per keyword per row), which is the dominant cost in add_features over tens
     of thousands of reviews.
+
+    [한국어] 텍스트에 등장하는 키워드의 "서로 다른 종류 수"를 센다.
+    키워드 세트당 정규식 1개를 미리 컴파일해 재사용(lru_cache)하므로,
+    행마다 키워드별로 re.search를 도는 방식보다 5만 행 기준 약 4배 빠르다.
+    단어 경계(\\b)를 쓰므로 "er"가 "better" 안에서 오탐되지 않는다.
     """
     if not keywords:
         return 0
@@ -170,6 +208,11 @@ def build_target(df: pd.DataFrame) -> pd.Series:
     project transparently defines a proxy target:
     - severe medical keyword appears, or
     - low rating plus at least one symptom keyword.
+
+    [한국어] 약한 라벨(weak label) 생성 — 이 프로젝트의 target.
+    원본에 정답 ADE 라벨이 없으므로, 교수님 피드백에 따라 투명한 규칙으로 정의한다:
+      위험군(1) = (심각 키워드 등장) OR (평점 ≤ 3 AND 일반 증상 키워드 등장)
+    전체 데이터 기준 clause A 9.6% + clause B 11.3% → 합집합 18.6%가 위험군이 된다.
     """
     text = df["review"].fillna("").astype(str)
     severe = text.map(lambda value: count_keywords(value, SEVERE_KEYWORDS))
@@ -180,6 +223,12 @@ def build_target(df: pd.DataFrame) -> pd.Series:
 
 
 def compute_drug_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """[한국어] 약물별 평점 통계(리뷰 수·평균·Q1·Q3·IQR·낮은 이상치 기준) 계산.
+
+    EDA에서 약물마다 평점 분포가 크게 다름을 확인했기 때문에(Box Plot),
+    "낮은 평점"의 기준을 전체 평균이 아니라 **약물별 IQR**(Q1 − 1.5×IQR)로 잡는다.
+    리뷰 5건 미만 약물은 분위수가 불안정하므로 전체 분포 기준으로 보정한다.
+    """
     base = df.dropna(subset=["rating"]).copy()
     if base.empty:
         return pd.DataFrame(
@@ -216,6 +265,12 @@ def compute_drug_stats(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
+    """[한국어] 특성 엔지니어링 메인 함수 — 원본 7컬럼에서 13개 수치 특성 + 약한 라벨 생성.
+
+    노트북(R&D)과 Streamlit 앱(Production)이 이 함수를 그대로 공유하므로
+    (Single Source of Truth), 양쪽의 특성 값이 항상 동일하다.
+    각 특성의 EDA 근거·계산식·예측 유용성은 docs/특성_엔지니어링.md 표 참고.
+    """
     out = df.copy()
     stat_cols = [
         "drug_review_count",
@@ -228,19 +283,29 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     ]
     out = out.drop(columns=[col for col in stat_cols if col in out.columns], errors="ignore")
 
+    # ① 기본 정제: 결측 보정(평점은 중앙값, 공감 수는 0) — EDA의 결측 분석 반영
     out["review"] = out["review"].fillna("").astype(str)
     out["rating"] = pd.to_numeric(out["rating"], errors="coerce").fillna(out["rating"].median())
     out["useful_count"] = pd.to_numeric(out["useful_count"], errors="coerce").fillna(0)
-    out["review_length"] = out["review"].str.len()
-    out["word_count"] = out["review"].str.findall(r"[A-Za-z']+").map(len)
-    out["exclamation_count"] = out["review"].str.count("!")
-    out["uppercase_ratio"] = out["review"].map(_uppercase_ratio)
+
+    # ② 언어/감정 신호 특성 — EDA에서 "위험군 리뷰가 길고 표현이 격하다"는 발견 반영
+    out["review_length"] = out["review"].str.len()                      # 글자 수
+    out["word_count"] = out["review"].str.findall(r"[A-Za-z']+").map(len)  # 단어 수
+    out["exclamation_count"] = out["review"].str.count("!")             # 느낌표 = 감정 강도
+    out["uppercase_ratio"] = out["review"].map(_uppercase_ratio)        # 대문자 비율(강조/분노)
+
+    # ③ 키워드 사전 특성 — severe/symptom은 라벨 정의용(학습 제외), positive는 비누수 특성
     out["severe_keyword_count"] = out["review"].map(lambda value: count_keywords(value, SEVERE_KEYWORDS))
     out["symptom_keyword_count"] = out["review"].map(lambda value: count_keywords(value, SYMPTOM_KEYWORDS))
     out["positive_keyword_count"] = out["review"].map(lambda value: count_keywords(value, POSITIVE_KEYWORDS))
+
+    # ④ 약한 라벨 생성 — low_rating_flag(평점≤3)와 키워드 수로 target 정의 (보고서 3.1절)
     out["low_rating_flag"] = (out["rating"] <= 3).astype(int)
     out["risk_label"] = build_target(out)
 
+    # ⑤ 약물 단위 통계 특성 — EDA의 "약물 3,671종, 분포 제각각" 발견 반영.
+    #    같은 2점이라도 평균 9점 약물에서는 이상치, 평균 3점 약물에서는 평범하므로
+    #    약물별 IQR 기준으로 낮은 평점 이상치(rating_iqr_low_outlier)를 판정한다.
     stats = compute_drug_stats(out)
     out = out.merge(stats, how="left", on="drug_name")
     global_count = len(out)
@@ -286,6 +351,11 @@ def make_prediction_frame(
     Only the user's row is feature-engineered (cheap); the drug-level statistics
     (review count, avg rating, IQR cutoff) are looked up from the base dataset so
     we never re-featurize the whole 50k+ row frame on each prediction click.
+
+    [한국어] 서비스 페이지에서 사용자 입력 1건을 모델 입력 형태로 변환한다.
+    텍스트 특성은 입력 행 1개만 계산(저렴)하고, 약물별 통계는 전체 데이터에서
+    조회한다 — 클릭할 때마다 5만 행 전체를 다시 특성화하지 않기 위한 설계.
+    데이터에 없는 새 약물이면 전체 분포 통계로 대체한다(콜드 스타트 처리).
     """
     drug_name = drug_name or "Unknown"
     row = pd.DataFrame(

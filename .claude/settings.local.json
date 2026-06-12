@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(ls -la data/)",
+      "Bash(ls -la \".kagglehub_cache/datasets/jessicali9530/kuc-hackathon-winter-2018/versions/2/\")",
+      "Bash(python -c \"import pandas as pd; df=pd.read_csv\\('.kagglehub_cache/datasets/jessicali9530/kuc-hackathon-winter-2018/versions/2/drugsComTrain_raw.csv', nrows=5\\); print\\(list\\(df.columns\\)\\); print\\(df.shape\\)\")",
+      "Bash(py -0p)",
+      "Bash(where python *)",
+      "Bash(./venv/Scripts/python.exe -c \"import pandas, sklearn, streamlit, plotly; print\\('deps OK', pandas.__version__, sklearn.__version__\\)\")",
+      "Bash(../venv/Scripts/python.exe -c ' *)",
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Bash(../venv/Scripts/python.exe eda_report.py)",
+      "Bash(../venv/Scripts/python.exe eda_report.py 80000)"
+    ]
+  }
+}

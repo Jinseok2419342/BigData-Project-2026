@@ -66,6 +66,11 @@ def _read_csv_from_zip(zip_path: Path, member_name: str, max_rows: int | None = 
 
 
 def _standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    # [한국어] 컬럼 표준화 + 기본 정제. EDA에서 발견한 품질 이슈를 여기서 처리한다:
+    #  - drugName→drug_name 등 snake_case 통일, 누락 컬럼은 기본값으로 생성
+    #  - review의 HTML 엔티티(&quot; &#039;) 복원 — EDA 발견 4번
+    #  - rating/useful_count 숫자화, date는 형식 혼재라 errors="coerce"로 관대하게 파싱
+    #  - 빈 리뷰 행 제거(텍스트가 핵심 입력이므로)
     rename = {}
     lower_map = {str(col).lower(): col for col in df.columns}
     for source, target in STANDARD_COLUMNS.items():
@@ -289,6 +294,13 @@ def load_drug_reviews(
     2. already-downloaded KaggleHub cache (read directly, no network)
     3. KaggleHub network download (first-time fetch)
     4. generated demo data, so the app still opens during development
+
+    [한국어] 4단계 폴백 적재 체인 — 발표 시연이 절대 멈추지 않게 하는 안전장치.
+      ① data/ 로컬 CSV → ② KaggleHub 캐시 직접 읽기(네트워크 없이, 결정적)
+      → ③ KaggleHub 네트워크 다운로드(최초 1회) → ④ 데모 샘플 생성
+    ②를 ③보다 먼저 두는 이유: kagglehub는 캐시가 있어도 매번 네트워크를
+    확인하므로, 와이파이가 불안정하면 진짜 데이터가 있는데도 데모로 떨어질
+    수 있다. 캐시를 직접 읽으면 오프라인에서도 항상 같은 데이터가 나온다.
     """
     loaders: Iterable = (
         (_load_kaggle_cache, _load_kagglehub, _load_local_csvs)

@@ -29,6 +29,10 @@ class ModelBundle:
 
 
 def _build_preprocessor() -> ColumnTransformer:
+    # [한국어] 모델 입력 전처리기.
+    #  - 리뷰 원문 → TF-IDF (1~2gram, 상위 1,500개, 영어 불용어 제거, 2회 미만 등장 제외)
+    #  - 수치 특성 → 표준화(StandardScaler). MODEL_FEATURES만 사용 — 라벨 정의
+    #    컬럼(severe/symptom 키워드 수, low_rating_flag)은 여기 들어오지 않는다(누수 차단).
     return ColumnTransformer(
         transformers=[
             (
@@ -57,6 +61,15 @@ def _score(y_true, pred, proba=None) -> dict:
 
 
 def train_risk_model(df: pd.DataFrame, sample_size: int = 20_000) -> ModelBundle:
+    """[한국어] 위험군 분류 모델 학습 파이프라인.
+
+    1) 라벨 비율을 유지한 층화 샘플링(기본 2만 행) — 수업 PC에서도 1분 내 학습
+    2) train/test 75:25 분리(stratify) 후 RandomForest 학습 (배포 모델)
+    3) HistGradientBoosting(부스팅 계열)과 단순 규칙(rating≤3) 베이스라인을
+       같은 검증셋에서 비교 — "ML이 단순 규칙을 정말 이기는가"를 보여주는 표
+    RF를 배포 모델로 둔 이유: 단건 추론이 빠르고 feature_importances_로
+    어떤 단어·특성이 위험 판정에 기여했는지 해석할 수 있어서다.
+    """
     data = ensure_features(df)
     data = data.dropna(subset=["review", "risk_label"]).copy()
     data = data[data["review"].str.strip().astype(bool)]
@@ -73,6 +86,7 @@ def train_risk_model(df: pd.DataFrame, sample_size: int = 20_000) -> ModelBundle
         raise ValueError("Model training requires both risk and safe examples.")
 
     # Leakage-free input: raw review text (TF-IDF) + non-label-defining numerics.
+    # [한국어] 누수 차단의 실제 지점: 입력은 "리뷰 원문 + 비누수 수치 특성"뿐이다.
     X = data[["review"] + MODEL_FEATURES]
     stratify = y if y.value_counts().min() >= 2 else None
     X_train, X_test, y_train, y_test = train_test_split(
@@ -127,6 +141,8 @@ def train_risk_model(df: pd.DataFrame, sample_size: int = 20_000) -> ModelBundle
         pass
 
     # --- naive baseline: "rating <= 3 => risk" (the trivial rule a model must beat) ---
+    # [한국어] "ML 없이 평점만 보면?"이라는 가장 단순한 규칙. 모델이 이걸 크게
+    # 이겨야(F1 0.62 vs 0.90) 텍스트에 실제 예측 신호가 있다고 말할 수 있다.
     base_pred = (X_test["rating"] <= 3).astype(int)
     baseline = _score(y_test, base_pred)
     baseline["name"] = "Baseline (rating<=3)"
@@ -152,6 +168,8 @@ def _to_dense(x):
 
 
 def predict_risk(bundle: ModelBundle, row: pd.DataFrame) -> dict:
+    # [한국어] 단건 추론: 학습 때와 동일한 입력 형태(리뷰 원문 + 비누수 특성)로
+    # 위험 확률을 계산하고, 0.5 기준으로 위험군/안전군을 판정한다.
     X = row[["review"] + MODEL_FEATURES]
     proba = float(bundle.pipeline.predict_proba(X)[0, 1])
     pred = int(proba >= 0.5)
