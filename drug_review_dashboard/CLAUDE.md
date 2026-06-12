@@ -97,8 +97,11 @@ These four constraints are non-negotiable — preserve them in any future edit:
 3. **Image OCR is decoupled** — the text pipeline + chatbot are the core. Pill-image
    multimodal recognition is an isolated **bonus** path with graceful fallback
    (filename match) so the dashboard never crashes if no vision model is running.
-4. **License clarity** — UCI Druglib.com original dataset is **CC BY 4.0**; the
-   Kaggle redistribution is referenced and contrasted in the docs. Keep this accurate.
+4. **License clarity** — the data is the UCI **Drug Review Dataset (Drugs.com)**
+   (UCI #462, Gräßer et al. 2018; *not* the Druglib.com dataset, UCI #461): **CC BY 4.0**
+   at UCI, while the Kaggle redistribution (`kuc-hackathon-winter-2018`) lists the stricter
+   **CC BY-NC-SA 4.0** — the project follows the stricter terms. Keep this accurate and
+   identical across README/보고서/문제정의/발표자료.
 
 ---
 

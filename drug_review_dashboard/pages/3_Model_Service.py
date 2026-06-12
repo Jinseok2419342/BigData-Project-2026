@@ -91,7 +91,7 @@ with st.expander("모델 성능 · 비교 · 특성 중요도 보기", expanded=
             comp[c] = (comp[c] * 100).round(1)
         st.dataframe(
             comp,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "model": "모델",
@@ -109,7 +109,7 @@ with st.expander("모델 성능 · 비교 · 특성 중요도 보기", expanded=
         cm_df = pd.DataFrame(cm, index=["실제 안전군", "실제 위험군"], columns=["예측 안전군", "예측 위험군"])
         fig = px.imshow(cm_df, text_auto=True, color_continuous_scale="Blues", labels={"color": "건수"})
         fig.update_layout(title=f"혼동행렬 (배포 모델: {bundle.model_name})")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         fig = px.bar(
             bundle.feature_importance.sort_values("importance"),
@@ -118,7 +118,11 @@ with st.expander("모델 성능 · 비교 · 특성 중요도 보기", expanded=
             orientation="h",
             labels={"importance": "중요도", "feature": "특성"},
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+    st.caption(
+        "해석: 혼동행렬에서 놓친 위험군(False Negative)이 주된 오류이며, 누수 제거 후 상위 특성은 "
+        "rating과 hospital·er·swelling 같은 의미 있는 위험 토큰입니다 — 모델이 규칙 암기가 아니라 텍스트 신호를 학습했다는 근거입니다."
+    )
 
 st.divider()
 
@@ -140,7 +144,7 @@ with left:
     if uploaded is not None:
         image_bytes = uploaded.getvalue()
         image = Image.open(uploaded)
-        st.image(image, caption="업로드한 이미지", use_container_width=True)
+        st.image(image, caption="업로드한 이미지", width="stretch")
 
         if use_vision:
             # 비전 호출도 route_chat과 같은 폴백 체인(recognize_drug_image)을 쓴다.
@@ -192,7 +196,7 @@ with left:
     )
     rating = st.slider("사용자 평점", 1.0, 10.0, 2.0, step=0.5)
     useful_count = st.number_input("유사한 경험을 참고한 사람 수(usefulCount)", min_value=0, value=0, step=1)
-    submitted = st.button("위험도 예측", type="primary", use_container_width=True)
+    submitted = st.button("위험도 예측", type="primary", width="stretch")
 
 with right:
     st.subheader("예측 결과")
@@ -264,7 +268,7 @@ IQR 이상치 여부: {iqr_flag}
             display["risk_label"] = display["risk_label"].map({0: "안전군", 1: "위험군"})
             st.dataframe(
                 display,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_config={
                     "rating": st.column_config.NumberColumn("평점", format="%.1f"),

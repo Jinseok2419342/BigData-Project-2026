@@ -95,7 +95,7 @@ with st.expander("이 약물의 모니터링 요약 (챗봇 근거 데이터)", 
                 labels={"count": "빈도", "keyword": "키워드"},
             )
             fig.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
     st.caption("가장 많이 보고된 부작용/증상 키워드는 챗봇 답변의 근거로 사용됩니다.")
 
 st.divider()
@@ -116,7 +116,7 @@ example_qs = [
 cols = st.columns(len(example_qs))
 clicked = None
 for col, q in zip(cols, example_qs):
-    if col.button(q, use_container_width=True):
+    if col.button(q, width="stretch"):
         clicked = q
 
 # render history
