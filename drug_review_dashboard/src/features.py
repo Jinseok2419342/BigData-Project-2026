@@ -152,7 +152,7 @@ LABEL_DEFINING_FEATURES = [
 # added on top of these inside the modeling pipeline.
 # [한국어] 모델에 실제로 들어가는 수치 특성 = 전체 − 라벨 정의 3개.
 # rating은 사용자가 직접 준 신호이고, 증상 키워드 수 없이 단독으로는 라벨을
-# 복원할 수 없으므로 의도적으로 유지했다 (보고서 3.3절 참고).
+# 복원할 수 없으므로 의도적으로 유지했다
 MODEL_FEATURES = [c for c in NUMERIC_FEATURES if c not in LABEL_DEFINING_FEATURES]
 
 

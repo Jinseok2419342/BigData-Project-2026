@@ -23,7 +23,7 @@ pg = st.navigation(
 )
 
 st.sidebar.markdown("### 약물 리뷰 부작용 위험 탐지")
-st.sidebar.caption("장진석 / 20241499 — 빅데이터 분석 프로그래밍 기말 프로젝트")
+st.sidebar.caption("장진석 / 20241499 — 빅데이터 분석 프로젝트 기말 프로젝트")
 st.sidebar.caption(
     "데이터: UCI Drug Review Dataset (Drugs.com), "
     "Kaggle 재배포본 사용 · CC BY 4.0(UCI) / CC BY-NC-SA 4.0(Kaggle)"
