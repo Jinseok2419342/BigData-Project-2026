@@ -43,9 +43,13 @@ def get_model(max_rows: int, sample_size: int):
 
 
 def guess_drug_from_filename(file_name: str, options: list[str]) -> str | None:
-    stem = Path(file_name).stem.lower().replace("_", " ").replace("-", " ")
+    # 하이픈/언더스코어를 공백으로 바꾼 형태와 원본 형태 둘 다에서 약물명을 찾는다.
+    # (예: 'L-methylfolate.png'는 하이픈을 공백으로 치환하면 'L-methylfolate'와 안 맞으므로 원본도 함께 검사)
+    raw = Path(file_name).stem.lower()
+    spaced = raw.replace("_", " ").replace("-", " ")
     for drug in options:
-        if drug.lower() in stem:
+        d = drug.lower()
+        if d in raw or d in spaced:
             return drug
     return None
 
