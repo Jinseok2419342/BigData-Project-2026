@@ -48,10 +48,10 @@
     .slide > * { position: relative; z-index: 1; }
 
     .eyebrow { color: var(--secondary); font-weight:700; letter-spacing:2px; font-size:15px; margin-bottom:10px; }
-    .title { font-size: 38px; font-weight: 800; color: var(--primary); display:flex; align-items:center; gap:14px; }
+    .title { font-size: 40px; font-weight: 800; color: var(--primary); display:flex; align-items:center; gap:14px; }
     .title .star { color: var(--accent-green); font-size: 30px; }
     .title::after { content:''; flex-grow:1; height:1px; background:linear-gradient(90deg,var(--primary),transparent); margin-left:16px; }
-    .subhead { color: var(--text-dim); font-size:18px; margin-top:10px; }
+    .subhead { color: var(--text-dim); font-size:19px; margin-top:10px; }
 
     .body { flex-grow:1; display:flex; flex-direction:column; justify-content:center; }
     .row { display:flex; gap:28px; align-items:stretch; }
@@ -61,23 +61,23 @@
     .imgcard img { width:100%; display:block; border-radius:6px; object-fit:contain; }
     .imgcard.tall img { max-height: 380px; }
     .imgcard.mid img  { max-height: 300px; }
-    .cap { color: var(--accent-green); font-size:15px; font-weight:600; text-align:center; }
+    .cap { color: var(--accent-green); font-size:16px; font-weight:600; text-align:center; line-height:1.45; }
     .cap .so { color: var(--text-dim); font-weight:400; }
 
     ul.points { list-style:none; display:flex; flex-direction:column; gap:14px; }
-    ul.points li { font-size:21px; line-height:1.5; padding-left:30px; position:relative; }
+    ul.points li { font-size:22px; line-height:1.5; padding-left:30px; position:relative; }
     ul.points li::before { content:'▸'; position:absolute; left:0; color:var(--primary); font-weight:700; }
     ul.points li b { color: var(--accent-green); }
-    ul.points li .dim { color: var(--text-dim); font-size:17px; }
+    ul.points li .dim { color: var(--text-dim); font-size:18px; }
 
     .callout {
         background: linear-gradient(135deg, rgba(34,211,238,0.13), rgba(168,85,247,0.13));
-        border:1px solid var(--primary); border-radius:14px; padding:18px 22px; font-size:19px; line-height:1.55;
+        border:1px solid var(--primary); border-radius:14px; padding:18px 22px; font-size:20px; line-height:1.55;
     }
     .callout b { color: var(--accent-green); }
     .danger-callout {
         background: rgba(251,113,133,0.10); border:1px solid var(--danger);
-        border-radius:14px; padding:16px 22px; font-size:19px; line-height:1.5;
+        border-radius:14px; padding:16px 22px; font-size:20px; line-height:1.5;
     }
     .danger-callout b { color: var(--danger); }
 
@@ -85,21 +85,21 @@
     .cover { align-items:center; justify-content:center; text-align:center; }
     .cover .big { font-size:54px; font-weight:800; color:var(--text-main); line-height:1.25; }
     .cover .big span { color: var(--primary); }
-    .cover .sub2 { font-size:22px; color:var(--text-dim); margin-top:22px; max-width:880px; }
+    .cover .sub2 { font-size:24px; color:var(--text-dim); margin-top:22px; max-width:900px; }
     .cover .who { margin-top:40px; font-size:20px; color:var(--text-main); }
     .cover .who .pill { display:inline-block; background:rgba(168,85,247,0.18); border:1px solid var(--secondary);
         color:#e9d5ff; padding:5px 16px; border-radius:40px; font-size:16px; margin-top:14px; }
     .cover .q { margin-top:30px; font-size:21px; color:var(--accent-green); font-style:italic; }
 
     /* 표 */
-    table.perf { width:100%; border-collapse:collapse; font-size:20px; }
+    table.perf { width:100%; border-collapse:collapse; font-size:22px; }
     table.perf th, table.perf td { padding:12px 16px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.10); }
-    table.perf th { color:var(--primary); font-size:17px; }
+    table.perf th { color:var(--primary); font-size:18px; }
     table.perf td:first-child { text-align:left; font-weight:700; }
     table.perf tr.hi td { color:var(--accent-green); }
     table.perf tr.dim td { color:var(--text-dim); }
 
-    .demo-input { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:16px 20px; font-size:19px; line-height:1.7; }
+    .demo-input { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:14px 18px; font-size:20px; line-height:1.6; }
     .demo-input code { background:rgba(34,211,238,0.14); color:var(--accent-green); padding:2px 9px; border-radius:6px; font-size:17px; }
     .demo-flag { display:inline-flex; align-items:center; gap:10px; background:var(--secondary); color:#fff; font-weight:700; font-size:22px; padding:10px 22px; border-radius:40px; }
 
@@ -119,6 +119,22 @@
     #notes.show { display:block; }
     #notes .label { color:var(--secondary); font-weight:700; font-size:13px; letter-spacing:1px; }
     .hint { position:absolute; top:14px; right:18px; font-size:12px; color:var(--text-dim); z-index:50; }
+
+    /* 슬라이드 4만 살짝 작게 */
+    .compact4 .demo-input { font-size:18px; }
+    .compact4 ul.points li { font-size:20px; }
+    .compact4 ul.points li .dim { font-size:16px; }
+    .compact4 .demo-flag { font-size:20px; }
+    .compact4 .cap { font-size:15px; }
+
+    /* 슬라이드 6 아키텍처 다이어그램 (R&D → src → 앱) */
+    .arch { display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
+    .arch .box { background:rgba(255,255,255,0.04); border:1px solid var(--primary); border-radius:12px; padding:14px 22px; text-align:center; }
+    .arch .box b { color:var(--primary); font-size:19px; }
+    .arch .box.hi { border-color:var(--accent-green); background:rgba(222,255,154,0.06); }
+    .arch .box.hi b { color:var(--accent-green); }
+    .arch .box span { display:block; color:var(--text-dim); font-size:13px; margin-top:4px; }
+    .arch .arrow { color:var(--accent-green); font-size:26px; font-weight:700; }
 
     /* 인쇄/PDF: Ctrl+P → 'PDF로 저장' 시 6장이 한 장씩 모두 나오도록.
        (헤드리스 크롬 --print-to-pdf 도 이 규칙을 사용해 6쪽 PDF를 만든다) */
@@ -152,12 +168,11 @@
     <!-- 1. 제목 -->
     <section class="slide cover">
         <div class="big">약물 리뷰 기반 <span>부작용 위험 탐지</span></div>
-        <div class="sub2">환자가 쓴 자유 텍스트 리뷰만 보고 <b style="color:var(--accent-green)">심각한 부작용(ADE) 위험군</b>을 탐지하는 Streamlit 서비스</div>
+        <div class="sub2">환자 리뷰 텍스트에 <b style="color:var(--accent-green)">평점·약물 통계 특성</b>을 더해 <b style="color:var(--accent-green)">심각한 부작용(ADE) 위험 신호</b>를 골라내는 Streamlit 서비스</div>
         <div class="who">
             장진석 · 20241499<br>
             <span class="pill">빅데이터 분석 프로젝트 · 기말 프로젝트</span>
         </div>
-        <div class="q">"환자의 자유 텍스트에서, 즉시 주의가 필요한 위험 신호를 기계가 골라낼 수 있을까?"</div>
     </section>
 
     <!-- 2. 문제정의 & 데이터 -->
@@ -168,11 +183,11 @@
             <div class="row">
                 <div class="col" style="flex:1.15; justify-content:center;">
                     <ul class="points">
-                        <li><b>데이터</b> UCI Drug Review (Kaggle 재배포)<br><span class="dim">215,063행 × 7열 · CSV · 약물명·질환·리뷰·평점(1~10)·날짜·공감수</span></li>
-                        <li><b>문제</b> "심각한 부작용" 정답 라벨이 <b>없음</b><br><span class="dim">→ 교수님 피드백 반영, 규칙 기반 <b>약한 라벨링</b>으로 target 직접 정의</span></li>
-                        <li><b>target</b> 위험군(1) / 안전군(0) 이진 분류 <span class="dim">— 전체의 18.6%</span></li>
+                        <li><b>문제</b> 리뷰·평점으로 <b>심각한 부작용(ADE) 위험 신호 조기 탐지</b> <span class="dim">(먹기 전·후 참고)</span></li>
+                        <li><b>데이터</b> UCI Drug Review (Kaggle) · <b>215,063행 × 7열 · CSV</b></li>
+                        <li><b>target</b> 위험군/안전군 이진 분류 <b>(18.6%)</b> <span class="dim">— 정답 없어 약한 라벨링</span></li>
                     </ul>
-                    <div class="callout" style="margin-top:18px;">라이선스: 원본 UCI <b>CC BY 4.0</b> / Kaggle 재배포본 <b>CC BY-NC-SA 4.0</b> → 더 엄격한 쪽 준수, 데이터는 미포함·출처 URL만 명시</div>
+                    <div class="callout" style="margin-top:18px;">라이선스: UCI <b>CC BY 4.0</b> / Kaggle <b>CC BY-NC-SA 4.0</b> → 엄격한 쪽 준수, 출처만 명시</div>
                 </div>
                 <div class="col" style="flex:0.85;">
                     <div class="imgcard tall"><img src="eda_outputs/03_label_balance.png" alt="라벨 균형"></div>
@@ -190,40 +205,38 @@
             <div class="row">
                 <div class="col">
                     <div class="imgcard mid"><img src="eda_outputs/01_rating_dist.png" alt="평점 분포"></div>
-                    <div class="cap">평점은 J자형 (10·1점 양극단)<br><span class="so">그래서 무엇 → 만족/불만이 극단으로 갈림, 위험군 중앙값 2 vs 안전군 9</span></div>
+                    <div class="cap">평점은 J자형 (10·1점 양극단)<br><span class="so">→ 위험군 평점 중앙값 <b>2</b> vs 안전군 <b>9</b> — "낮은 평점 = 불만 신호"</span></div>
                 </div>
                 <div class="col">
                     <div class="imgcard mid"><img src="eda_outputs/04_corr_heatmap.png" alt="상관 히트맵"></div>
-                    <div class="cap">상관 히트맵 — 누수 단서 포착<br><span class="so">그래서 무엇 → 키워드-라벨 상관 0.64로 비정상 ↑ → 슬라이드 5 누수로 연결</span></div>
+                    <div class="cap">상관 히트맵 — 누수 단서<br><span class="so">→ severe 키워드 ↔ 라벨 <b>0.64</b>. 라벨을 그 키워드로 만들어서(=<b>정답 베끼기</b>) → 학습에서 제외 (→슬5)</span></div>
                 </div>
             </div>
-            <div class="callout" style="margin-top:18px;">그 외: 약물 <b>3,671종</b>·리뷰 수 편차 극심(약물별 IQR 기준 필요), <code style="color:var(--accent-green)">condition</code> 1,171행 <b>HTML 잔여물</b> → 전처리 필요</div>
+            <div class="callout" style="margin-top:18px;">그 외: 약물 <b>3,671종</b> (약물별 IQR 기준 필요) · <code style="color:var(--accent-green)">condition</code> <b>HTML 잔여물</b> → 전처리</div>
         </div>
     </section>
 
     <!-- 4. 라이브 데모 -->
-    <section class="slide">
+    <section class="slide compact4">
         <div class="eyebrow">LIVE DEMO ★</div>
         <div class="title"><span class="star">▶</span> 라이브 데모 <span style="font-size:18px;color:var(--text-dim);font-weight:400;">— 실제 앱으로 전환</span></div>
         <div class="body">
             <div class="row">
-                <div class="col" style="flex:1.05; justify-content:center; gap:18px;">
-                    <div class="demo-input">
-                        입력 ① 약물명 <code>Sertraline</code><br>
-                        입력 ② 증상 <code>Severe chest pain and my heart was racing, I could not breathe.</code><br>
-                        입력 ③ 평점 <code>2</code>
-                    </div>
-                    <div style="text-align:center; font-size:30px; color:var(--primary);">▼</div>
+                <div class="col" style="flex:1.0; justify-content:center; gap:12px;">
+                    <div class="demo-input"><b style="color:var(--primary)">① 모델 서비스</b> — 약물 <code>Sertraline</code> · 증상 <code>chest pain… could not breathe</code> · 평점 <code>2</code></div>
+                    <div style="text-align:center; font-size:24px; color:var(--primary);">▼</div>
                     <div style="text-align:center;"><span class="demo-flag">위험도 ~75% · 심각한 부작용 위험군</span></div>
-                    <ul class="points" style="margin-top:6px;">
+                    <div style="text-align:center; font-size:14px; color:var(--text-dim); margin-top:-4px;">※ 위험군 = '확정'이 아니라 <b style="color:var(--accent-green)">주의 깊게 볼 리뷰</b>를 골라낸 선별 신호</div>
+                    <ul class="points" style="margin-top:2px;">
                         <li>약물별 <b>IQR 이상치</b> 판정 + 과거 유사 리뷰 + 상담 리포트</li>
-                        <li><b>LLM 챗봇</b>: 약물 근거(grounding) 기반 부작용 질의응답</li>
-                        <li class="dim">Ollama→OpenAI→규칙 3단계 폴백 — LLM 없어도 앱은 안 멈춤</li>
                     </ul>
+                    <div class="demo-input"><b style="color:var(--secondary)">② AI 챗봇</b> — 약물 선택 → 그 약물 리뷰 <b>근거(grounding)</b>로 부작용 질의응답</div>
                 </div>
-                <div class="col" style="flex:0.95;">
-                    <div class="imgcard mid"><img src="docs/screenshots/model_service.png" alt="모델 서비스"></div>
-                    <div class="cap">실패 대비 백업 캡처<br><span class="so">정상 시연 시 이 슬라이드는 넘기고 실제 앱 사용</span></div>
+                <div class="col" style="flex:1.0; gap:8px;">
+                    <div class="imgcard" style="padding:6px;"><img src="docs/screenshots/model_service.png" alt="모델 서비스" style="max-height:222px;"></div>
+                    <div class="cap" style="margin-top:-2px;">① 예측 결과 화면</div>
+                    <div class="imgcard" style="padding:6px;"><img src="docs/screenshots/chatbot.png" alt="AI 상담 챗봇" style="max-height:222px;"></div>
+                    <div class="cap" style="margin-top:-2px;">② 약물 근거 LLM 챗봇 <span class="so">— 시연 실패 시 이 두 캡처가 백업</span></div>
                 </div>
             </div>
         </div>
@@ -233,23 +246,24 @@
     <section class="slide">
         <div class="eyebrow">MODEL · FEATURES · METRICS ★</div>
         <div class="title"><span class="star">⭐</span> 모델 · 특성 · 성능 <span style="font-size:18px;color:var(--text-dim);font-weight:400;">— "정직한 숫자"</span></div>
-        <div class="body">
+        <div class="body" style="padding-top:26px;">
             <div class="row">
                 <div class="col" style="justify-content:center;">
                     <ul class="points">
-                        <li><b>새 특성 11개</b> (원본 7컬럼 → 가공·도출)<br><span class="dim">약물별 IQR 저평점 이상치, 리뷰 길이·느낌표·대문자비율, 긍정 키워드 수 — <b>전부 EDA 근거</b> + 리뷰 TF-IDF 1,500차원</span></li>
-                        <li><b>RandomForest 배포</b> <span class="dim">— 빠른 단건 추론 + 특성 중요도 해석. HGB는 비교군</span></li>
+                        <li><b>새 특성 11개</b> <span class="dim">(원본 7컬럼 → 도출): IQR 이상치·리뷰 길이·느낌표·긍정어 등 — 전부 EDA 근거 + TF-IDF 1,500</span></li>
+                        <li><b>RandomForest 배포</b> <span class="dim">(해석 쉬움) · HGB 비교군</span></li>
                     </ul>
-                    <div class="danger-callout" style="margin-top:8px;">처음 <b>정확도 99.6% / AUC 1.0</b> → 의심 → <b>타깃 누수</b> 발견<br><span style="font-size:16px;color:var(--text-dim);">라벨 정의 컬럼 3개가 학습에 포함 → 모델이 규칙을 암기. 제외 후 재학습 = 정직한 성능</span></div>
-                </div>
-                <div class="col" style="justify-content:center;">
-                    <table class="perf">
+                    <div class="danger-callout" style="margin-top:10px;">처음 <b>99.6% / AUC 1.0</b> → <b>타깃 누수</b> (라벨 정의 컬럼이 학습에 포함)<br><span style="font-size:16px;color:var(--text-dim);">제외 후 재학습 = <b style="color:var(--accent-green)">정직한 F1 0.90</b></span></div>
+                    <table class="perf" style="margin-top:12px;">
                         <tr><th>모델</th><th>F1</th><th>AUC</th></tr>
                         <tr class="hi"><td>RandomForest (배포)</td><td>90.2%</td><td>0.983</td></tr>
                         <tr><td>HistGradientBoosting</td><td>97.4%</td><td>0.988</td></tr>
                         <tr class="dim"><td>단순규칙 (rating≤3)</td><td>61.9%</td><td>—</td></tr>
                     </table>
-                    <div class="callout" style="margin-top:16px;">ML이 단순 규칙(F1 0.62)을 <b>크게 능가</b> → 텍스트에 진짜 예측 신호 존재. 누수 제거 후 상위 특성도 hospital·er·suicidal 등 <b>의미 있는 토큰</b></div>
+                </div>
+                <div class="col" style="justify-content:center; gap:8px;">
+                    <div class="imgcard"><img src="docs/screenshots/feature_importance.png" alt="특성 중요도 (누수 제거 모델)"></div>
+                    <div class="cap"><span class="so">→ 상위 특성: rating·<b>hospital·er·suicidal</b> 등 의미 토큰 (규칙 암기 ✗ · 텍스트 신호 학습 ✓ · 단순규칙 F1 0.62 능가)</span></div>
                 </div>
             </div>
         </div>
@@ -259,13 +273,20 @@
     <section class="slide">
         <div class="eyebrow">CONCLUSION & LIMITATION</div>
         <div class="title">결론 · 한계</div>
-        <div class="body" style="justify-content:center; gap:22px;">
-            <div class="callout" style="font-size:22px;"><b>결론</b> — 환자 리뷰 텍스트만으로 위험군을 <b>정직한 F1 0.90</b> 수준으로 분류하는 MVP를 완성. R&D(노트북) → Production(앱)이 같은 <code style="color:var(--accent-green)">src/</code>를 공유하는 단일 진실 원천 구조.</div>
-            <ul class="points" style="font-size:20px;">
-                <li><b>한계</b> 약한 라벨이 키워드·평점에서 파생 → 이 성능은 "키워드 규칙의 일반화"이지 <b>미지의 부작용 발견은 아님</b> (완곡 표현은 놓칠 수 있음)</li>
-                <li><b>향후</b> Recall 우선 threshold 튜닝 · 실제 ADE 라벨 결합 · 임베딩 기반 일반화 · 멀티모달 강건화</li>
+        <div class="body" style="justify-content:center; gap:18px;">
+            <div class="callout" style="font-size:21px;"><b>결론</b> — 리뷰 텍스트 + 평점·통계로 위험군을 <b>정직한 F1 0.90</b>으로 분류. 아래 <b>단일 진실 원천</b> 구조로 R&D ↔ 앱이 같은 코드.</div>
+            <div class="arch">
+                <div class="box"><b>주피터 노트북</b><span>R&D · 로직 정의·검증</span></div>
+                <div class="arrow">→</div>
+                <div class="box hi"><b>src/ 핵심 모듈</b><span>단일 진실 원천(SSOT)</span></div>
+                <div class="arrow">→</div>
+                <div class="box"><b>Streamlit 앱</b><span>5페이지 서비스</span></div>
+            </div>
+            <ul class="points" style="font-size:18px;">
+                <li><b>한계</b> ① 키워드 규칙의 일반화 <span class="dim">(미지 ADE 발견은 아님)</span> &nbsp;② 영어 기반 <span class="dim">(ML·LLM 공통)</span></li>
+                <li><b>향후</b> 멀티모달 OCR 강화(흐림·기울기) · 한국어 리뷰로 확장</li>
             </ul>
-            <div style="text-align:center; font-size:24px; color:var(--primary); margin-top:8px;">감사합니다 — 질문 받겠습니다.</div>
+            <div style="text-align:center; font-size:24px; color:var(--primary); margin-top:4px;">감사합니다 — 질문 받겠습니다.</div>
         </div>
     </section>
 
@@ -281,12 +302,12 @@
 
 <script>
     const NOTES = [
-        "(0:30) 장진석입니다. 환자 리뷰 텍스트만으로 심각한 부작용 위험 신호를 찾는 Streamlit 서비스를 만들었습니다. 핵심 질문을 던지며 시작.",
+        "(0:30) 장진석입니다. 환자 리뷰 텍스트에 평점·약물 통계 특성을 더해 심각한 부작용 위험 신호를 찾는 Streamlit 서비스를 만들었습니다.",
         "(1:00) 21만 5천 행·7컬럼. 핵심은 '정답 라벨이 없다'는 것 → 교수님 피드백대로 약한 라벨링으로 직접 정의(18.6%). 라이선스 한 줄 언급.",
         "(2:00) 발견 3가지: ① 평점 J자형(위험군 중앙값 2 vs 안전군 9) ② 약물 3,671종→약물별 IQR 기준 ③ 상관 히트맵 누수 단서 0.64(가장 중요, 슬라이드5 복선).",
-        "(3:30) ★앱 전환. 입력값은 미리 채워두고 예측 버튼만. 위험도·IQR·상담 리포트 확인. 챗봇 한 번. LLM 폴백 설계 한 줄. 실패하면 이 캡처로 대체.",
+        "(3:30) ★앱 전환. ① 모델 서비스: 입력값 미리 채워두고 예측 버튼만 → 위험도·IQR·상담 리포트. ② 챗봇: 약물 선택 후 그 약물 리뷰 근거로 질의응답 한 번. LLM 없어도 규칙 폴백. 실패 시 캡처로 대체.",
         "(4:30) ★새 특성 11개 전부 EDA 근거. 그리고 핵심 스토리: 99.6%→누수 발견→제거→정직한 F1 0.90. 베이스라인 0.62를 크게 이김. 절대 자르지 말 것.",
-        "(5:00) 결론 F1 0.90. 한계는 솔직하게: 키워드 일반화이지 미지 ADE 발견은 아님. 향후 과제 1~2개. 감사합니다, 질문 받겠습니다."
+        "(5:00) 결론 F1 0.90(텍스트+평점+통계). 한계 솔직하게: ① 키워드 일반화이지 미지 ADE 발견은 아님 ② 영어 데이터 기반이라 한국어엔 그대로 적용 불가(ML·LLM 공통). 향후: 멀티모달 OCR 강화·한국어 확장. 감사합니다."
     ];
     const slides = document.querySelectorAll('.slide');
     const total = slides.length;
