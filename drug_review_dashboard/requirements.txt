@@ -1,39 +1,37 @@
 # Hand-curated dependencies for the Drug Review ADE dashboard.
-# Only packages directly imported by app.py / src/ / pages/ / eda_report.py /
-# notebooks/ / tests/ are listed; transitive deps are resolved by pip.
-# Compatible-release pins (~=) keep installs reproducible without locking
-# to environment-specific builds.
+# NOTE: Streamlit Cloud runs Python 3.14 — packages must have Python 3.14-compatible
+# pre-built wheels. Use >= bounds instead of ~= to avoid stale local pip-index issues.
 
-# --- Streamlit dashboard (app.py, pages/, src/data_cache.py) ---
-streamlit~=1.45
+# --- Streamlit dashboard ---
+streamlit>=1.45,<2.0
 
-# --- Data processing (src/data_loader.py, src/features.py) ---
-pandas~=2.2
-numpy~=1.26
+# --- Data processing ---
+pandas>=2.2,<3.0
+numpy>=2.0,<3.0            # 2.x required: 1.x has no Python 3.14 wheels
 
-# --- Machine learning (src/modeling.py) ---
-scikit-learn~=1.5
+# --- Machine learning ---
+scikit-learn>=1.5,<2.0
 
-# --- Visualization (pages/ use plotly; eda_report.py + notebook use matplotlib/seaborn) ---
-plotly~=5.24
-matplotlib~=3.9
-seaborn~=0.13
+# --- Visualization ---
+plotly>=5.24,<7.0
+matplotlib>=3.9,<4.0
+seaborn>=0.13,<1.0
 
-# --- Dataset loading via KaggleHub (src/data_loader.py) ---
-kagglehub~=0.3
+# --- Dataset loading ---
+kagglehub>=0.3,<2.0
 
-# --- LLM integration: local Ollama first, OpenAI backup (src/llm_helper.py) ---
-ollama~=0.3
-openai~=1.59
+# --- LLM integration ---
+ollama>=0.3,<1.0
+openai>=2.0,<3.0           # code uses the 2.x SDK API
 
-# --- Environment variable management: .env loading (src/llm_helper.py) ---
-python-dotenv~=1.0
+# --- Environment variable management ---
+python-dotenv>=1.0,<2.0
 
-# --- Image upload preview on the model service page (pages/3_Model_Service.py) ---
-pillow~=10.4
+# --- Image upload preview ---
+pillow>=11.0,<13.0         # 11+ required: 10.x has no Python 3.14 wheels
 
-# --- R&D notebook (notebooks/EDA_and_Preprocessing_Analysis.ipynb) ---
-jupyterlab~=4.2
+# --- R&D notebook ---
+jupyterlab>=4.2,<5.0
 
-# --- Testing (tests/test_llm_routing.py) ---
-pytest~=8.3
+# --- Testing ---
+pytest>=8.3,<10.0
