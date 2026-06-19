@@ -183,15 +183,13 @@
             <div class="row">
                 <div class="col" style="flex:1.15; justify-content:center;">
                     <ul class="points">
-                        <li><b>문제</b> 리뷰·평점으로 <b>심각한 부작용(ADE) 위험 신호 조기 탐지</b> <span class="dim">(먹기 전·후 참고)</span></li>
-                        <li><b>데이터</b> UCI Drug Review (Kaggle) · <b>215,063행 × 7열 · CSV</b></li>
-                        <li><b>target</b> 위험군/안전군 이진 분류 <b>(18.6%)</b> <span class="dim">— 정답 없어 약한 라벨링</span></li>
+                        <li><b>풀려는 문제 :</b> 환자 리뷰·평점에서 <b>심각한 부작용(ADE) 위험 신호 조기 탐지</b> <span class="dim">(먹기 전·후 참고)</span></li>
                     </ul>
                     <div class="callout" style="margin-top:18px;">라이선스: UCI <b>CC BY 4.0</b> / Kaggle <b>CC BY-NC-SA 4.0</b> → 엄격한 쪽 준수, 출처만 명시</div>
                 </div>
-                <div class="col" style="flex:0.85;">
-                    <div class="imgcard tall"><img src="eda_outputs/03_label_balance.png" alt="라벨 균형"></div>
-                    <div class="cap">위험군 18.6% <span class="so">— 안전군이 다수인 불균형 데이터</span></div>
+                <div class="col" style="flex:1.1;">
+                    <div class="imgcard"><img src="docs/screenshots/R_row_and_column.png" alt="데이터 행·열 구조" style="max-height:480px;"></div>
+                    <div class="cap" style="font-size:13px; color:var(--text-dim); font-weight:400; text-align:left; line-height:1.5;">UCI Drug Review (Kaggle) · <b style="color:var(--accent-green)">215,063행 × 7열 · CSV</b><br>위험군/안전군 이진 분류 <b style="color:var(--accent-green)">(18.6%)</b> — 정답 없어 <b style="color:var(--accent-green)">약한 라벨링</b></div>
                 </div>
             </div>
         </div>
@@ -250,20 +248,20 @@
             <div class="row">
                 <div class="col" style="justify-content:center;">
                     <ul class="points">
-                        <li><b>새 특성 11개</b> <span class="dim">(원본 7컬럼 → 도출): IQR 이상치·리뷰 길이·느낌표·긍정어 등 — 전부 EDA 근거 + TF-IDF 1,500</span></li>
-                        <li><b>RandomForest 배포</b> <span class="dim">(해석 쉬움) · HGB 비교군</span></li>
+                        <li><b>RandomForest 배포</b></li>
                     </ul>
                     <div class="danger-callout" style="margin-top:10px;">처음 <b>99.6% / AUC 1.0</b> → <b>타깃 누수</b> (라벨 정의 컬럼이 학습에 포함)<br><span style="font-size:16px;color:var(--text-dim);">제외 후 재학습 = <b style="color:var(--accent-green)">정직한 F1 0.90</b></span></div>
                     <table class="perf" style="margin-top:12px;">
                         <tr><th>모델</th><th>F1</th><th>AUC</th></tr>
                         <tr class="hi"><td>RandomForest (배포)</td><td>90.2%</td><td>0.983</td></tr>
-                        <tr><td>HistGradientBoosting</td><td>97.4%</td><td>0.988</td></tr>
                         <tr class="dim"><td>단순규칙 (rating≤3)</td><td>61.9%</td><td>—</td></tr>
                     </table>
                 </div>
-                <div class="col" style="justify-content:center; gap:8px;">
-                    <div class="imgcard"><img src="docs/screenshots/feature_importance.png" alt="특성 중요도 (누수 제거 모델)"></div>
-                    <div class="cap"><span class="so">→ 상위 특성: rating·<b>hospital·er·suicidal</b> 등 의미 토큰 (규칙 암기 ✗ · 텍스트 신호 학습 ✓ · 단순규칙 F1 0.62 능가)</span></div>
+                <div class="col" style="justify-content:center; gap:6px;">
+                    <div class="imgcard"><img src="docs/screenshots/features_overview.png" alt="특성 목록" style="max-height:280px;"></div>
+                    <div class="cap" style="font-size:13px;"><span class="so">(원본 7컬럼 → 도출): IQR 이상치·리뷰 길이·느낌표·긍정어 등 — 전부 EDA 근거 + TF-IDF 1,500</span></div>
+                    <div class="imgcard" style="opacity:0.88;"><img src="docs/screenshots/feature_importance.png" alt="특성 중요도" style="max-height:235px;"></div>
+                    <div class="cap" style="font-size:13px;"><span class="so">→ 상위: rating·<b>hospital·er·suicidal</b> 등 의미 토큰 (단순규칙 F1 0.62 능가)</span></div>
                 </div>
             </div>
         </div>
@@ -273,9 +271,9 @@
     <section class="slide">
         <div class="eyebrow">CONCLUSION & LIMITATION</div>
         <div class="title">결론 · 한계</div>
-        <div class="body" style="justify-content:center; gap:18px;">
-            <div class="callout" style="font-size:21px;"><b>결론</b> — 리뷰 텍스트 + 평점·통계로 위험군을 <b>정직한 F1 0.90</b>으로 분류. 아래 <b>단일 진실 원천</b> 구조로 R&D ↔ 앱이 같은 코드.</div>
-            <div class="arch">
+        <div class="body" style="justify-content:center; gap:26px;">
+            <div class="callout" style="font-size:21px;"><b>결론</b> — 리뷰 텍스트 + 평점·통계로 위험군을 <b>정직한 F1 0.90</b>으로 분류. (아래 <b>단일 진실 원천</b> 구조로 R&D ↔ 앱이 같은 코드.)</div>
+            <div class="arch" style="margin-top:8px;">
                 <div class="box"><b>주피터 노트북</b><span>R&D · 로직 정의·검증</span></div>
                 <div class="arrow">→</div>
                 <div class="box hi"><b>src/ 핵심 모듈</b><span>단일 진실 원천(SSOT)</span></div>
@@ -283,10 +281,10 @@
                 <div class="box"><b>Streamlit 앱</b><span>5페이지 서비스</span></div>
             </div>
             <ul class="points" style="font-size:18px;">
-                <li><b>한계</b> ① 키워드 규칙의 일반화 <span class="dim">(미지 ADE 발견은 아님)</span> &nbsp;② 영어 기반 <span class="dim">(ML·LLM 공통)</span></li>
-                <li><b>향후</b> 멀티모달 OCR 강화(흐림·기울기) · 한국어 리뷰로 확장</li>
+                <li><b>한계</b> 데이터·키워드·TF-IDF 모두 영어 기반 → <b>한국어 리뷰엔 그대로 적용 불가</b> <span class="dim">(ML·LLM 공통)</span></li>
+                <li><b>향후</b> 한국어 리뷰 데이터 확보 · 한국어 키워드 사전 구축 · 한국 의약품 자료로 확장</li>
             </ul>
-            <div style="text-align:center; font-size:24px; color:var(--primary); margin-top:4px;">감사합니다 — 질문 받겠습니다.</div>
+            <div style="text-align:center; font-size:24px; color:var(--primary); margin-top:36px;">감사합니다</div>
         </div>
     </section>
 
