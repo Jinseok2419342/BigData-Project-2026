@@ -180,7 +180,7 @@
         <div class="eyebrow">PROBLEM & DATA</div>
         <div class="title">문제정의 &amp; 데이터</div>
         <div class="body">
-            <div class="row">
+            <div class="row" style="flex:1; align-items:stretch;">
                 <div class="col" style="flex:1.15; justify-content:center;">
                     <ul class="points">
                         <li><b>풀려는 문제 :</b> 환자 리뷰·평점에서 <b>심각한 부작용(ADE) 위험 신호 조기 탐지</b> <span class="dim">(먹기 전·후 참고)</span></li>
@@ -188,7 +188,7 @@
                     <div class="callout" style="margin-top:18px;">라이선스: UCI <b>CC BY 4.0</b> / Kaggle <b>CC BY-NC-SA 4.0</b> → 엄격한 쪽 준수, 출처만 명시</div>
                 </div>
                 <div class="col" style="flex:1.1;">
-                    <div class="imgcard"><img src="docs/screenshots/R_row_and_column.png" alt="데이터 행·열 구조" style="max-height:480px;"></div>
+                    <div class="imgcard" style="flex:1; display:flex; align-items:center; justify-content:center;"><img src="docs/screenshots/R_row_and_column.png" alt="데이터 행·열 구조" style="width:100%; object-fit:contain;"></div>
                     <div class="cap" style="font-size:13px; color:var(--text-dim); font-weight:400; text-align:left; line-height:1.5;">UCI Drug Review (Kaggle) · <b style="color:var(--accent-green)">215,063행 × 7열 · CSV</b><br>위험군/안전군 이진 분류 <b style="color:var(--accent-green)">(18.6%)</b> — 정답 없어 <b style="color:var(--accent-green)">약한 라벨링</b></div>
                 </div>
             </div>
@@ -248,7 +248,7 @@
             <div class="row">
                 <div class="col" style="justify-content:center;">
                     <ul class="points">
-                        <li><b>RandomForest 배포</b></li>
+                        <li><b>ML - RandomForest (LLM은 gpt-4o-mini)</b></li>
                     </ul>
                     <div class="danger-callout" style="margin-top:10px;">처음 <b>99.6% / AUC 1.0</b> → <b>타깃 누수</b> (라벨 정의 컬럼이 학습에 포함)<br><span style="font-size:16px;color:var(--text-dim);">제외 후 재학습 = <b style="color:var(--accent-green)">정직한 F1 0.90</b></span></div>
                     <table class="perf" style="margin-top:12px;">
